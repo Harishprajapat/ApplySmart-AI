@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,40 @@ const perks = [
 ];
 
 function SignupPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Signup failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      toast.success("Account created successfully");
+      navigate({ to: "/dashboard" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not create account";
+      toast.error(message);
+    } finally {
       setLoading(false);
-      toast.success("Account created (demo)");
-    }, 1000);
+    }
   };
 
   return (
@@ -49,25 +74,47 @@ function SignupPage() {
             <form onSubmit={submit} className="mt-8 space-y-4">
               <div>
                 <Label>Full name</Label>
-                <Input placeholder="Alex Smith" className="mt-2" required />
+                <Input
+                  placeholder="Alex Smith"
+                  className="mt-2"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <Label>Email</Label>
-                <Input type="email" placeholder="you@example.com" className="mt-2" required />
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  className="mt-2"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <Label>Password</Label>
-                <Input type="password" placeholder="At least 8 characters" className="mt-2" required />
+                <Input
+                  type="password"
+                  placeholder="At least 8 characters"
+                  className="mt-2"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
               <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
-                {loading ? "Creating account…" : "Create account"}
+                {loading ? "Creating account..." : "Create account"}
               </Button>
             </form>
 
             <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
               <div className="h-px flex-1 bg-border" /> OR <div className="h-px flex-1 bg-border" />
             </div>
-            <Button variant="outline" size="lg" className="w-full">Continue with Google</Button>
+            <Button variant="outline" size="lg" className="w-full">
+              Continue with Google
+            </Button>
 
             <p className="mt-8 text-center text-xs text-muted-foreground">
               By signing up you agree to our Terms and Privacy.
