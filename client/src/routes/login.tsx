@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +11,39 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      toast.success("Signed in successfully");
+      navigate({ to: "/dashboard" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not sign in";
+      toast.error(message);
+    } finally {
       setLoading(false);
-      toast.success("Signed in (demo)");
-    }, 1000);
+    }
   };
 
   return (
@@ -32,7 +56,7 @@ function LoginPage() {
             <blockquote className="max-w-md text-2xl font-semibold leading-tight">
               "ApplySmart turned my job hunt around. I went from zero callbacks to 4 interviews in 2 weeks."
             </blockquote>
-            <div className="mt-5 text-sm opacity-80">— Priya S., Product Manager @ Razorpay</div>
+            <div className="mt-5 text-sm opacity-80">- Priya S., Product Manager @ Razorpay</div>
           </div>
         </div>
       </div>
@@ -51,7 +75,14 @@ function LoginPage() {
             <form onSubmit={submit} className="mt-8 space-y-4">
               <div>
                 <Label>Email</Label>
-                <Input type="email" placeholder="you@example.com" className="mt-2" required />
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  className="mt-2"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <div className="flex items-center justify-between">
@@ -60,10 +91,17 @@ function LoginPage() {
                     Forgot?
                   </a>
                 </div>
-                <Input type="password" placeholder="••••••••" className="mt-2" required />
+                <Input
+                  type="password"
+                  placeholder="********"
+                  className="mt-2"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
               <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
 

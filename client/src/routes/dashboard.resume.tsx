@@ -59,16 +59,21 @@ const handleAnalyze = async () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: localStorage.getItem("token") || "",
       },
       body: JSON.stringify({ resume, jd }),
     });
 
     const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error || data?.message || "Error analyzing resume");
+    }
 
     setResult(data);
     toast.success("Analysis complete!");
   } catch (error) {
-    toast.error("Error analyzing resume");
+    const message = error instanceof Error ? error.message : "Error analyzing resume";
+    toast.error(message);
   }
 
   setLoading(false);
