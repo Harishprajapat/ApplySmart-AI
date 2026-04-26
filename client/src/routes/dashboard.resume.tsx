@@ -19,35 +19,99 @@ interface AnalysisResult {
   suggestions: string[];
 }
 
+let pdfjsLibPromise: Promise<any> | null = null;
+
+async function getPdfJs() {
+  if (typeof window === "undefined") {
+    throw new Error("PDF parsing is only available in the browser.");
+  }
+
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = Promise.all([
+      import("pdfjs-dist"),
+      import("pdfjs-dist/build/pdf.worker?url"),
+    ]).then(([pdfjsLib, workerModule]) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+
+  return pdfjsLibPromise;
+}
+
 function ResumeAnalyzer() {
   const [resume, setResume] = useState("");
   const [jd, setJd] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  const handleAnalyze = () => {
-    if (!resume.trim() || !jd.trim()) {
-      toast.error("Please add both your resume and the job description.");
-      return;
+const handleAnalyze = async () => {
+  if (!resume.trim() || !jd.trim()) {
+    toast.error("Please add both your resume and the job description.");
+    return;
+  }
+
+  setLoading(true);
+  setResult(null);
+
+  try {
+    const res = await fetch("http://localhost:5000/api/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ resume, jd }),
+    });
+
+    const data = await res.json();
+
+    setResult(data);
+    toast.success("Analysis complete!");
+  } catch (error) {
+    toast.error("Error analyzing resume");
+  }
+
+  setLoading(false);
+};
+
+
+
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    toast.error("Please upload a PDF file");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+    try {
+      const pdfjsLib = await getPdfJs();
+      const typedArray = new Uint8Array(reader.result as ArrayBuffer);
+      const pdf = await pdfjsLib.getDocument(typedArray).promise;
+
+      let fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+
+        const strings = content.items.map((item: any) => item.str);
+        fullText += strings.join(" ") + "\n";
+      }
+
+      setResume(fullText);
+      toast.success("PDF uploaded successfully!");
+    } catch (error) {
+      toast.error("Could not read this PDF. Please try another file.");
     }
-    setLoading(true);
-    setResult(null);
-    setTimeout(() => {
-      setResult({
-        score: 87,
-        matched: ["React", "TypeScript", "Node.js", "REST APIs", "Agile", "Git"],
-        missing: ["GraphQL", "Kubernetes", "System Design"],
-        suggestions: [
-          "Add a metric to your most recent role (e.g. 'reduced load time by 40%').",
-          "Include 'GraphQL' in your skills — it's mentioned 4× in the JD.",
-          "Move your education section below your experience for senior roles.",
-          "Use stronger action verbs: replace 'worked on' with 'led' or 'shipped'.",
-        ],
-      });
-      setLoading(false);
-      toast.success("Analysis complete!");
-    }, 1800);
   };
+
+  reader.readAsArrayBuffer(file);
+};
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -68,10 +132,22 @@ function ResumeAnalyzer() {
             placeholder="Paste your resume here…"
             className="mt-3 min-h-64 resize-none"
           />
-          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{resume.length} characters</span>
-            <button className="font-medium text-primary hover:underline">Upload PDF instead</button>
-          </div>
+         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+  <span>{resume.length} characters</span>
+
+  <label className="font-medium text-primary hover:underline cursor-pointer">
+    Upload PDF instead
+    <input
+      type="file"
+      accept="application/pdf"
+      className="hidden"
+      onChange={handleFileUpload}
+    />
+  </label>
+  <p className="text-xs text-muted-foreground mt-2">
+  Supports PDF resumes (auto-extracted)
+</p>
+</div>
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
