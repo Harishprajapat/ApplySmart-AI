@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 import {
   DropdownMenu,
@@ -62,6 +63,16 @@ const navItems = [
 function DashboardLayout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { user } = useCurrentUser();
+
+  const userName = user?.name?.trim() || "User";
+  const userEmail = user?.email?.trim() || "";
+  const initials = userName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -149,16 +160,16 @@ function DashboardLayout() {
               <DropdownMenuTrigger asChild>
                 <button className="ml-1 flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-accent">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-xs font-semibold text-primary-foreground">
-                    AS
+                    {initials}
                   </div>
-                  <span className="hidden text-sm font-medium sm:block">Alex Smith</span>
+                  <span className="hidden text-sm font-medium sm:block">{userName}</span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
-                  <div className="font-semibold">Alex Smith</div>
-                  <div className="text-xs font-normal text-muted-foreground">alex@applysmart.ai</div>
+                  <div className="font-semibold">{userName}</div>
+                  <div className="text-xs font-normal text-muted-foreground">{userEmail}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
