@@ -5,12 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/dashboard/settings")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
+  const { user } = useCurrentUser();
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
@@ -22,11 +25,11 @@ function SettingsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Full name</Label>
-            <Input defaultValue="Alex Smith" className="mt-2" />
+            <Input value={user?.name || ""} readOnly className="mt-2" />
           </div>
           <div>
             <Label>Email</Label>
-            <Input defaultValue="alex@applysmart.ai" className="mt-2" />
+            <Input value={user?.email || ""} readOnly className="mt-2" />
           </div>
           <div>
             <Label>Target role</Label>

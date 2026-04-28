@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/dashboard/")({
   component: DashboardHome,
@@ -67,6 +68,7 @@ type AnalysisItem = {
 };
 
 function DashboardHome() {
+  const { user } = useCurrentUser();
   const [recentActivity, setRecentActivity] = useState<AnalysisItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
 
@@ -106,7 +108,9 @@ function DashboardHome() {
     <div className="mx-auto max-w-7xl space-y-8">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, Alex</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome back, {user?.name?.split(" ")[0] || "there"}
+          </h1>
           <p className="mt-1.5 text-muted-foreground">
             You've got 3 active applications. Let's land you an interview today.
           </p>
