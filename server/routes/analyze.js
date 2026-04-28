@@ -1,9 +1,11 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Analysis from "../models/Analysis.js";
+import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const FREE_MONTHLY_LIMIT = 5;
 
 function extractJsonObject(text) {
   const cleanText = text.replace(/```json|```/g, "").trim();
@@ -15,6 +17,21 @@ function extractJsonObject(text) {
   }
 
   return cleanText.slice(firstBrace, lastBrace + 1);
+}
+
+function getCurrentMonthBounds() {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return { startOfMonth, startOfNextMonth };
+}
+
+async function getMonthlyUsage(userId) {
+  const { startOfMonth, startOfNextMonth } = getCurrentMonthBounds();
+  return Analysis.countDocuments({
+    user: userId,
+    createdAt: { $gte: startOfMonth, $lt: startOfNextMonth },
+  });
 }
 
 router.post("/", protect, async (req, res) => {
@@ -29,6 +46,25 @@ router.post("/", protect, async (req, res) => {
     if (!apiKey) {
       return res.status(500).json({
         error: "Missing Gemini API key. Set GEMINI_API_KEY in server/.env.",
+      });
+    }
+
+    const user = await User.findById(req.user).select("plan");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const used = await getMonthlyUsage(req.user);
+    const isFreePlan = user.plan !== "pro";
+
+    if (isFreePlan && used >= FREE_MONTHLY_LIMIT) {
+      return res.status(403).json({
+        code: "PLAN_LIMIT_REACHED",
+        message: `Free plan limit reached (${FREE_MONTHLY_LIMIT}/${FREE_MONTHLY_LIMIT} this month). Upgrade to Pro for unlimited analyses.`,
+        upgradeRequired: true,
+        plan: "free",
+        limit: FREE_MONTHLY_LIMIT,
+        used,
       });
     }
 
@@ -71,12 +107,20 @@ ${jd}
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
     });
 
+    const newUsed = used + 1;
+
     res.json({
       score: analysis.score,
       matched: analysis.matched,
       missing: analysis.missing,
       suggestions: analysis.suggestions,
       id: analysis._id,
+      usage: {
+        plan: isFreePlan ? "free" : "pro",
+        limit: isFreePlan ? FREE_MONTHLY_LIMIT : null,
+        used: newUsed,
+        remaining: isFreePlan ? Math.max(FREE_MONTHLY_LIMIT - newUsed, 0) : null,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -84,12 +128,31 @@ ${jd}
   }
 });
 
-// GET user past analyses
+router.get("/usage", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user).select("plan");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const used = await getMonthlyUsage(req.user);
+    const isFreePlan = user.plan !== "pro";
+
+    res.json({
+      plan: isFreePlan ? "free" : "pro",
+      limit: isFreePlan ? FREE_MONTHLY_LIMIT : null,
+      used,
+      remaining: isFreePlan ? Math.max(FREE_MONTHLY_LIMIT - used, 0) : null,
+      blocked: isFreePlan ? used >= FREE_MONTHLY_LIMIT : false,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch usage" });
+  }
+});
+
 router.get("/history", protect, async (req, res) => {
   try {
-    const analyses = await Analysis.find({ user: req.user })
-      .sort({ createdAt: -1 }); // latest first
-
+    const analyses = await Analysis.find({ user: req.user }).sort({ createdAt: -1 });
     res.json(analyses);
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch history" });

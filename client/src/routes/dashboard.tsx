@@ -13,7 +13,7 @@ import {
   Search,
   Clock
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,13 @@ function DashboardLayout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { user } = useCurrentUser();
+  const [usage, setUsage] = useState<{
+    plan: "free" | "pro";
+    limit: number | null;
+    used: number;
+    remaining: number | null;
+    blocked: boolean;
+  } | null>(null);
 
   const userName = user?.name?.trim() || "User";
   const userEmail = user?.email?.trim() || "";
@@ -73,6 +80,26 @@ function DashboardLayout() {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "U";
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/analyze/usage", {
+          headers: { Authorization: token },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setUsage(data);
+      } catch {
+        setUsage(null);
+      }
+    };
+
+    fetchUsage();
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -115,12 +142,18 @@ function DashboardLayout() {
         <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-sidebar-border bg-gradient-to-br from-primary/10 to-primary-glow/10 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="h-4 w-4 text-primary" />
-            Free plan
+            {usage?.plan === "pro" ? "Pro plan" : "Free plan"}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">3 of 5 analyses used this month.</p>
-          <Button variant="hero" size="sm" className="mt-3 w-full" asChild>
-            <Link to="/pricing">Upgrade to Pro</Link>
-          </Button>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {usage?.plan === "pro"
+              ? "Unlimited analyses this month."
+              : `${usage?.used ?? 0} of ${usage?.limit ?? 5} analyses used this month.`}
+          </p>
+          {usage?.plan !== "pro" && (
+            <Button variant="hero" size="sm" className="mt-3 w-full" asChild>
+              <Link to="/pricing">Upgrade to Pro</Link>
+            </Button>
+          )}
         </div>
       </aside>
 
