@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   FileSearch,
@@ -18,6 +18,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 import {
   DropdownMenu,
@@ -30,7 +31,22 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
-  component: DashboardLayout,
+  beforeLoad: ({ location }) => {
+    if (typeof window === "undefined") return;
+
+    const token = window.localStorage.getItem("token");
+    if (!token) {
+      throw redirect({
+        to: "/login",
+        search: { redirect: location.href },
+      });
+    }
+  },
+  component: () => (
+    <ProtectedRoute>
+      <DashboardLayout />
+    </ProtectedRoute>
+  ),
 });
 
 const navItems = [
@@ -40,7 +56,7 @@ const navItems = [
   { to: "/dashboard/interview", label: "Interview Prep", icon: MessageSquareQuote, exact: false },
   { to: "/dashboard/jobs", label: "Job Tracker", icon: KanbanSquare, exact: false },
   { to: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
-  { to: "/dashboard/history", label: "History", icon: Clock }
+  { to: "/dashboard/history", label: "History", icon: Clock, exact: false }
 ] as const;
 
 function DashboardLayout() {
@@ -159,7 +175,13 @@ function DashboardLayout() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/login">
+                  <Link
+                    to="/login"
+                    search={{ redirect: undefined }}
+                    onClick={() => {
+                      localStorage.removeItem("token");
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Log out
                   </Link>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,14 @@ import { Logo } from "@/components/logo";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   component: LoginPage,
 });
 
 function LoginPage() {
-  const navigate = useNavigate();
+  const search = Route.useSearch();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +40,10 @@ function LoginPage() {
 
       localStorage.setItem("token", data.token);
       toast.success("Signed in successfully");
-      navigate({ to: "/dashboard" });
+      const redirectTo = search.redirect && search.redirect.startsWith("/")
+        ? search.redirect
+        : "/dashboard";
+      window.location.assign(redirectTo);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not sign in";
       toast.error(message);
