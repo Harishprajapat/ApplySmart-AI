@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +12,25 @@ export const Route = createFileRoute("/dashboard/resume")({
   component: ResumeAnalyzer,
 });
 
+interface UsageInfo {
+  plan: "free" | "pro";
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  blocked: boolean;
+}
+
 interface AnalysisResult {
   score: number;
   matched: string[];
   missing: string[];
   suggestions: string[];
+  usage?: {
+    plan: "free" | "pro";
+    limit: number | null;
+    used: number;
+    remaining: number | null;
+  };
 }
 
 let pdfjsLibPromise: Promise<any> | null = null;
@@ -44,79 +58,118 @@ function ResumeAnalyzer() {
   const [jd, setJd] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
 
-const handleAnalyze = async () => {
-  if (!resume.trim() || !jd.trim()) {
-    toast.error("Please add both your resume and the job description.");
-    return;
-  }
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  setLoading(true);
-  setResult(null);
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/analyze/usage", {
+          headers: { Authorization: token },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setUsage(data);
+      } catch {
+        setUsage(null);
+      }
+    };
 
-  try {
-    const res = await fetch("http://localhost:5000/api/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: localStorage.getItem("token") || "",
-      },
-      body: JSON.stringify({ resume, jd }),
-    });
+    fetchUsage();
+  }, []);
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.error || data?.message || "Error analyzing resume");
+  const handleAnalyze = async () => {
+    if (!resume.trim() || !jd.trim()) {
+      toast.error("Please add both your resume and the job description.");
+      return;
     }
 
-    setResult(data);
-    toast.success("Analysis complete!");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Error analyzing resume";
-    toast.error(message);
-  }
+    setLoading(true);
+    setResult(null);
+    setLimitError(null);
 
-  setLoading(false);
-};
-
-
-
-const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  if (file.type !== "application/pdf") {
-    toast.error("Please upload a PDF file");
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = async () => {
     try {
-      const pdfjsLib = await getPdfJs();
-      const typedArray = new Uint8Array(reader.result as ArrayBuffer);
-      const pdf = await pdfjsLib.getDocument(typedArray).promise;
+      const res = await fetch("http://localhost:5000/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: localStorage.getItem("token") || "",
+        },
+        body: JSON.stringify({ resume, jd }),
+      });
 
-      let fullText = "";
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-
-        const strings = content.items.map((item: any) => item.str);
-        fullText += strings.join(" ") + "\n";
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 403 && data?.code === "PLAN_LIMIT_REACHED") {
+          setLimitError(data?.message || "Free plan limit reached. Upgrade to Pro.");
+          setUsage({
+            plan: "free",
+            limit: data?.limit ?? 5,
+            used: data?.used ?? 5,
+            remaining: 0,
+            blocked: true,
+          });
+        }
+        if (res.status >= 500 || data?.error === "AI error") {
+          throw new Error("Server is busy right now. Please try again.");
+        }
+        throw new Error(data?.error || data?.message || "Error analyzing resume");
       }
 
-      setResume(fullText);
-      toast.success("PDF uploaded successfully!");
+      setResult(data);
+      if (data?.usage) {
+        setUsage({
+          ...data.usage,
+          blocked: data.usage.plan === "free" && data.usage.remaining === 0,
+        });
+      }
+      toast.success("Analysis complete!");
     } catch (error) {
-      toast.error("Could not read this PDF. Please try another file.");
+      const message = error instanceof Error ? error.message : "Error analyzing resume";
+      toast.error(message);
     }
+
+    setLoading(false);
   };
 
-  reader.readAsArrayBuffer(file);
-};
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const pdfjsLib = await getPdfJs();
+        const typedArray = new Uint8Array(reader.result as ArrayBuffer);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+
+        let fullText = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: any) => item.str);
+          fullText += strings.join(" ") + "\n";
+        }
+
+        setResume(fullText);
+        toast.success("PDF uploaded successfully!");
+      } catch {
+        toast.error("Could not read this PDF. Please try another file.");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -127,6 +180,32 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         </p>
       </div>
 
+      {usage && (
+        <div className="rounded-2xl border border-border/60 bg-card p-4 text-sm shadow-soft">
+          {usage.plan === "pro" ? (
+            <p className="text-muted-foreground">Pro plan: Unlimited analyses this month.</p>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-muted-foreground">
+                Free plan: {usage.used}/{usage.limit ?? 5} analyses used this month.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/pricing">Upgrade</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {limitError && (
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
+          <p className="font-medium">{limitError}</p>
+          <Button variant="hero" size="sm" className="mt-3" asChild>
+            <Link to="/pricing">Upgrade to Pro</Link>
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
           <Label className="text-sm font-semibold">Your resume</Label>
@@ -134,25 +213,22 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
           <Textarea
             value={resume}
             onChange={(e) => setResume(e.target.value)}
-            placeholder="Paste your resume here…"
+            placeholder="Paste your resume here..."
             className="mt-3 min-h-64 resize-none"
           />
-         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-  <span>{resume.length} characters</span>
-
-  <label className="font-medium text-primary hover:underline cursor-pointer">
-    Upload PDF instead
-    <input
-      type="file"
-      accept="application/pdf"
-      className="hidden"
-      onChange={handleFileUpload}
-    />
-  </label>
-  <p className="text-xs text-muted-foreground mt-2">
-  Supports PDF resumes (auto-extracted)
-</p>
-</div>
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>{resume.length} characters</span>
+            <label className="cursor-pointer font-medium text-primary hover:underline">
+              Upload PDF instead
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Supports PDF resumes (auto-extracted)</p>
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
@@ -161,7 +237,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
           <Textarea
             value={jd}
             onChange={(e) => setJd(e.target.value)}
-            placeholder="Paste the job description here…"
+            placeholder="Paste the job description here..."
             className="mt-3 min-h-64 resize-none"
           />
           <div className="mt-3 text-xs text-muted-foreground">{jd.length} characters</div>
@@ -169,20 +245,24 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       </div>
 
       <div className="flex justify-center">
-        <Button variant="hero" size="xl" onClick={handleAnalyze} disabled={loading}>
+        <Button
+          variant="hero"
+          size="xl"
+          onClick={handleAnalyze}
+          disabled={loading || Boolean(usage?.blocked)}
+        >
           {loading ? (
             <>
-              <Loader2 className="animate-spin" /> Analyzing…
+              <Loader2 className="animate-spin" /> Analyzing...
             </>
           ) : (
             <>
-              <Wand2 /> Analyze now
+              <Wand2 /> {usage?.blocked ? "Limit reached" : "Analyze now"}
             </>
           )}
         </Button>
       </div>
 
-      {/* Results */}
       {(loading || result) && (
         <div className="animate-fade-in-up space-y-6">
           {loading && <ResultsSkeleton />}
@@ -237,11 +317,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {result.matched.map((k) => (
-              <Badge
-                key={k}
-                variant="outline"
-                className="border-success/30 bg-success/10 text-success"
-              >
+              <Badge key={k} variant="outline" className="border-success/30 bg-success/10 text-success">
                 {k}
               </Badge>
             ))}
@@ -254,18 +330,12 @@ function ResultsView({ result }: { result: AnalysisResult }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {result.missing.map((k) => (
-              <Badge
-                key={k}
-                variant="outline"
-                className="border-warning/40 bg-warning/10 text-foreground"
-              >
+              <Badge key={k} variant="outline" className="border-warning/40 bg-warning/10 text-foreground">
                 {k}
               </Badge>
             ))}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Add these where genuine to lift your score.
-          </p>
+          <p className="mt-3 text-xs text-muted-foreground">Add these where genuine to lift your score.</p>
         </div>
       </div>
 
