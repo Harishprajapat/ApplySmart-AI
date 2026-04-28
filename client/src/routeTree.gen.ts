@@ -19,6 +19,7 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settin
 import { Route as DashboardResumeRouteImport } from './routes/dashboard.resume'
 import { Route as DashboardJobsRouteImport } from './routes/dashboard.jobs'
 import { Route as DashboardInterviewRouteImport } from './routes/dashboard.interview'
+import { Route as DashboardHistoryRouteImport } from './routes/dashboard.history'
 import { Route as DashboardCoverLetterRouteImport } from './routes/dashboard.cover-letter'
 
 const SignupRoute = SignupRouteImport.update({
@@ -71,6 +72,11 @@ const DashboardInterviewRoute = DashboardInterviewRouteImport.update({
   path: '/interview',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardHistoryRoute = DashboardHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardCoverLetterRoute = DashboardCoverLetterRouteImport.update({
   id: '/cover-letter',
   path: '/cover-letter',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/dashboard/cover-letter': typeof DashboardCoverLetterRoute
+  '/dashboard/history': typeof DashboardHistoryRoute
   '/dashboard/interview': typeof DashboardInterviewRoute
   '/dashboard/jobs': typeof DashboardJobsRoute
   '/dashboard/resume': typeof DashboardResumeRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/dashboard/cover-letter': typeof DashboardCoverLetterRoute
+  '/dashboard/history': typeof DashboardHistoryRoute
   '/dashboard/interview': typeof DashboardInterviewRoute
   '/dashboard/jobs': typeof DashboardJobsRoute
   '/dashboard/resume': typeof DashboardResumeRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/signup': typeof SignupRoute
   '/dashboard/cover-letter': typeof DashboardCoverLetterRoute
+  '/dashboard/history': typeof DashboardHistoryRoute
   '/dashboard/interview': typeof DashboardInterviewRoute
   '/dashboard/jobs': typeof DashboardJobsRoute
   '/dashboard/resume': typeof DashboardResumeRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/dashboard/cover-letter'
+    | '/dashboard/history'
     | '/dashboard/interview'
     | '/dashboard/jobs'
     | '/dashboard/resume'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/dashboard/cover-letter'
+    | '/dashboard/history'
     | '/dashboard/interview'
     | '/dashboard/jobs'
     | '/dashboard/resume'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/signup'
     | '/dashboard/cover-letter'
+    | '/dashboard/history'
     | '/dashboard/interview'
     | '/dashboard/jobs'
     | '/dashboard/resume'
@@ -237,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardInterviewRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/history': {
+      id: '/dashboard/history'
+      path: '/history'
+      fullPath: '/dashboard/history'
+      preLoaderRoute: typeof DashboardHistoryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/cover-letter': {
       id: '/dashboard/cover-letter'
       path: '/cover-letter'
@@ -249,6 +268,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardCoverLetterRoute: typeof DashboardCoverLetterRoute
+  DashboardHistoryRoute: typeof DashboardHistoryRoute
   DashboardInterviewRoute: typeof DashboardInterviewRoute
   DashboardJobsRoute: typeof DashboardJobsRoute
   DashboardResumeRoute: typeof DashboardResumeRoute
@@ -258,6 +278,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCoverLetterRoute: DashboardCoverLetterRoute,
+  DashboardHistoryRoute: DashboardHistoryRoute,
   DashboardInterviewRoute: DashboardInterviewRoute,
   DashboardJobsRoute: DashboardJobsRoute,
   DashboardResumeRoute: DashboardResumeRoute,

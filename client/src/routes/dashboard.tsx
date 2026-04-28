@@ -11,12 +11,14 @@ import {
   ChevronDown,
   Bell,
   Search,
+  Clock
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +40,7 @@ const navItems = [
   { to: "/dashboard/interview", label: "Interview Prep", icon: MessageSquareQuote, exact: false },
   { to: "/dashboard/jobs", label: "Job Tracker", icon: KanbanSquare, exact: false },
   { to: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
+  { to: "/dashboard/history", label: "History", icon: Clock }
 ] as const;
 
 function DashboardLayout() {

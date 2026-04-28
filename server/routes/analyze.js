@@ -84,4 +84,16 @@ ${jd}
   }
 });
 
+// GET user past analyses
+router.get("/history", protect, async (req, res) => {
+  try {
+    const analyses = await Analysis.find({ user: req.user })
+      .sort({ createdAt: -1 }); // latest first
+
+    res.json(analyses);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch history" });
+  }
+});
+
 export default router;

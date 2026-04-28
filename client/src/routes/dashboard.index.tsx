@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -14,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/dashboard/")({
   component: DashboardHome,
@@ -57,22 +60,53 @@ const quickActions = [
   },
 ] as const;
 
-const activity = [
-  { title: "Resume analyzed for Senior PM @ Notion", time: "2h ago", score: 94 },
-  { title: "Cover letter drafted for Data Scientist @ Google", time: "Yesterday" },
-  { title: "Interview prep: Tell me about yourself", time: "Yesterday", score: null },
-  { title: "Added Stripe — Senior SWE to tracker", time: "2 days ago" },
-];
+type AnalysisItem = {
+  _id: string;
+  score: number;
+  createdAt: string;
+};
 
 function DashboardHome() {
+  const [recentActivity, setRecentActivity] = useState<AnalysisItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setActivityLoading(false);
+      return;
+    }
+
+    const fetchRecentActivity = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/analyze/history", {
+          headers: {
+            Authorization: token,
+          },
+        });
+
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data)) {
+          setRecentActivity([]);
+          return;
+        }
+
+        setRecentActivity(data.slice(0, 4));
+      } catch {
+        setRecentActivity([]);
+      } finally {
+        setActivityLoading(false);
+      }
+    };
+
+    fetchRecentActivity();
+  }, []);
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
-      {/* Welcome */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, Alex 👋
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back, Alex</h1>
           <p className="mt-1.5 text-muted-foreground">
             You've got 3 active applications. Let's land you an interview today.
           </p>
@@ -84,7 +118,6 @@ function DashboardHome() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {stats.map((s) => (
           <div
@@ -101,7 +134,6 @@ function DashboardHome() {
         ))}
       </div>
 
-      {/* Quick actions */}
       <div>
         <h2 className="mb-4 text-lg font-semibold">Quick actions</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -128,28 +160,45 @@ function DashboardHome() {
         </div>
       </div>
 
-      {/* Activity + AI tip */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent activity</h2>
-            <Button variant="ghost" size="sm">View all</Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/dashboard/history">View all</Link>
+            </Button>
           </div>
-          <ul className="divide-y divide-border/60">
-            {activity.map((a, i) => (
-              <li key={i} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                <div>
-                  <div className="text-sm font-medium">{a.title}</div>
-                  <div className="text-xs text-muted-foreground">{a.time}</div>
+
+          {activityLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="rounded-xl border border-border/50 p-3">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="mt-2 h-3 w-24" />
                 </div>
-                {a.score && (
+              ))}
+            </div>
+          ) : recentActivity.length === 0 ? (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+              No recent analyses yet. Run a resume analysis to see activity here.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {recentActivity.map((item) => (
+                <li key={item._id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <div className="text-sm font-medium">Resume analysis completed</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                    </div>
+                  </div>
                   <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
-                    {a.score}% match
+                    {item.score}% match
                   </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-primary-glow/10 p-6 shadow-soft">
