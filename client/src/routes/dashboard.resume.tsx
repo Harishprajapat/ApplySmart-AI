@@ -1,11 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, Wand2 } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Wand2,
+  Copy,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  ListChecks,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/resume")({
@@ -52,6 +67,33 @@ async function getPdfJs() {
   }
 
   return pdfjsLibPromise;
+}
+
+let jsPdfPromise: Promise<any> | null = null;
+
+async function getJsPdf() {
+  if (!jsPdfPromise) {
+    jsPdfPromise = import("jspdf").then((module) => module.jsPDF);
+  }
+
+  return jsPdfPromise;
+}
+
+function formatResumeLines(resumeText: string) {
+  return resumeText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line, index, lines) => line || (index > 0 && lines[index - 1] !== ""));
+}
+
+function isLikelyHeading(line: string) {
+  const cleanLine = line.replace(/[:\-]$/, "").trim();
+  return (
+    cleanLine.length > 0 &&
+    cleanLine.length < 48 &&
+    cleanLine === cleanLine.toUpperCase() &&
+    /[A-Z]/.test(cleanLine)
+  );
 }
 
 function ResumeAnalyzer() {
@@ -276,107 +318,311 @@ function ResumeAnalyzer() {
 
 function ResultsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="mt-3 h-12 w-32" />
-          <Skeleton className="mt-4 h-2 w-full" />
-          <Skeleton className="mt-2 h-2 w-3/4" />
-        </div>
-      ))}
+    <div className="space-y-5">
+      <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="mt-4 h-10 w-56" />
+        <Skeleton className="mt-6 h-40 w-full" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-3 h-12 w-32" />
+            <Skeleton className="mt-4 h-2 w-full" />
+            <Skeleton className="mt-2 h-2 w-3/4" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function ResultsView({ result }: { result: AnalysisResult }) {
+  const [visibleSuggestions, setVisibleSuggestions] = useState(3);
+  const [copying, setCopying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const displayedSuggestions = result.suggestions.slice(0, visibleSuggestions);
+  const hasMoreSuggestions = result.suggestions.length > 3;
+
+  const handleCopy = async () => {
+    if (!result.improved_resume) {
+      toast.error("No improved resume is available to copy yet.");
+      return;
+    }
+
+    try {
+      setCopying(true);
+      await navigator.clipboard.writeText(result.improved_resume);
+      toast.success("Improved resume copied to clipboard.");
+    } catch {
+      toast.error("Could not copy the resume. Please try again.");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!result.improved_resume) {
+      toast.error("No improved resume is available to download yet.");
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      const JsPdf = await getJsPdf();
+      const doc = new JsPdf({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginX = 52;
+      const topMargin = 56;
+      const bottomMargin = 56;
+      const contentWidth = pageWidth - marginX * 2;
+      const lines = formatResumeLines(result.improved_resume);
+
+      let y = topMargin;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Improved Resume", marginX, y);
+      y += 28;
+
+      lines.forEach((line) => {
+        const heading = isLikelyHeading(line);
+        const bulletLine = /^[\u2022\-*]\s+/.test(line);
+        const prefix = bulletLine ? "• " : "";
+        const body = bulletLine ? line.replace(/^[\u2022\-*]\s+/, "") : line;
+
+        doc.setFont("helvetica", heading ? "bold" : "normal");
+        doc.setFontSize(heading ? 12 : 10.5);
+
+        const wrapped = doc.splitTextToSize(`${prefix}${body}`, contentWidth) as string[];
+        const lineHeight = heading ? 18 : 15;
+        const blockHeight = wrapped.length * lineHeight + (heading ? 6 : 2);
+
+        if (y + blockHeight > pageHeight - bottomMargin) {
+          doc.addPage();
+          y = topMargin;
+        }
+
+        doc.text(wrapped, marginX, y);
+        y += blockHeight;
+      });
+
+      doc.save("improved-resume.pdf");
+      toast.success("PDF downloaded.");
+    } catch {
+      toast.error("Could not generate the PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
-    <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/5 to-primary-glow/10 p-6 shadow-soft">
-          <div className="flex items-center gap-2 text-sm font-medium text-primary">
-            <Sparkles className="h-4 w-4" /> ATS Match Score
+    <div className="space-y-5">
+      <div className="rounded-[28px] border border-border/60 bg-card p-4 shadow-soft sm:p-6">
+        <div className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Improved Resume Ready
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">Use your optimized resume first</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                We kept the ATS score visible, but the rewritten resume is now the main output so it is instantly usable.
+              </p>
+            </div>
           </div>
-          <div className="mt-2 flex items-end gap-1">
-            <span className="text-5xl font-bold text-gradient">{result.score}</span>
-            <span className="mb-2 text-xl text-muted-foreground">%</span>
-          </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-gradient-primary transition-all duration-700"
-              style={{ width: `${result.score}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Strong match. A few tweaks could push you to 95+.
-          </p>
-        </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <CheckCircle2 className="h-4 w-4 text-success" /> Matched keywords
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {result.matched.map((k) => (
-              <Badge key={k} variant="outline" className="border-success/30 bg-success/10 text-success">
-                {k}
-              </Badge>
-            ))}
-          </div>
-        </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                ATS Score
+              </div>
+              <div className="mt-2 flex items-end gap-2">
+                <span className="text-3xl font-bold">{result.score}</span>
+                <span className="pb-1 text-sm text-muted-foreground">/ 100</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-background">
+                <div
+                  className="h-full rounded-full bg-gradient-primary transition-all duration-700"
+                  style={{ width: `${result.score}%` }}
+                />
+              </div>
+            </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <AlertCircle className="h-4 w-4 text-warning" /> Missing skills
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {result.missing.map((k) => (
-              <Badge key={k} variant="outline" className="border-warning/40 bg-warning/10 text-foreground">
-                {k}
-              </Badge>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">Add these where genuine to lift your score.</p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-        <h2 className="text-lg font-semibold">AI Suggestions</h2>
-        {result.suggestions.length ? (
-          <ul className="mt-4 space-y-3">
-            {result.suggestions.map((s, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 rounded-xl border border-border/40 bg-muted/30 p-4 transition-colors hover:bg-muted/60"
+            <div className="flex flex-col gap-2 sm:w-44">
+              <Button onClick={handleCopy} disabled={copying || !result.improved_resume} className="w-full">
+                <Copy />
+                {copying ? "Copying..." : "Copy to Clipboard"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadPdf}
+                disabled={downloading || !result.improved_resume}
+                className="w-full"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
-                  {i + 1}
-                </div>
-                <span className="text-sm">{s}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No suggestions were returned for this analysis.
-          </p>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-        <h2 className="text-lg font-semibold">Improved Resume</h2>
-        {result.improved_resume ? (
-          <div className="mt-4 rounded-xl border border-border/40 bg-muted/20 p-4">
-            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground">
-              {result.improved_resume}
-            </pre>
+                <Download />
+                {downloading ? "Preparing PDF..." : "Download as PDF"}
+              </Button>
+            </div>
           </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            We could not generate an improved resume this time. Please try again.
-          </p>
-        )}
+        </div>
+
+        <Tabs defaultValue="resume" className="mt-5">
+          <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-muted/50 p-1">
+            <TabsTrigger value="resume" className="h-11 rounded-xl">
+              <FileText />
+              Resume
+            </TabsTrigger>
+            <TabsTrigger value="suggestions" className="h-11 rounded-xl">
+              <ListChecks />
+              Suggestions
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="h-11 rounded-xl">
+              <Search />
+              Analysis
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="resume" className="mt-4">
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+              {result.improved_resume ? (
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-foreground">
+                  {result.improved_resume}
+                </pre>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  We could not generate an improved resume this time. Please try again.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="suggestions" className="mt-4">
+            <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">AI Suggestions</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    The most important improvements are surfaced first.
+                  </p>
+                </div>
+                <Badge variant="outline">{result.suggestions.length} items</Badge>
+              </div>
+
+              {result.suggestions.length ? (
+                <>
+                  <ul className="mt-4 space-y-3">
+                    {displayedSuggestions.map((s, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-primary text-xs font-bold text-primary-foreground">
+                          {i + 1}
+                        </div>
+                        <span className="pt-0.5 text-sm leading-6">{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {hasMoreSuggestions && (
+                    <Button
+                      variant="ghost"
+                      className="mt-3"
+                      onClick={() =>
+                        setVisibleSuggestions((current) =>
+                          current > 3 ? 3 : result.suggestions.length,
+                        )
+                      }
+                    >
+                      {visibleSuggestions > 3 ? (
+                        <>
+                          <ChevronUp />
+                          View less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown />
+                          View more
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  No suggestions were returned for this analysis.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analysis" className="mt-4">
+            <Accordion type="single" collapsible className="rounded-2xl border border-border/60 bg-card px-5 shadow-soft">
+              <AccordionItem value="ats-analysis" className="border-b-0">
+                <AccordionTrigger className="py-5 text-base font-semibold hover:no-underline">
+                  Detailed ATS Analysis
+                </AccordionTrigger>
+                <AccordionContent className="pb-5">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        Matched keywords
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {result.matched.length ? (
+                          result.matched.map((keyword) => (
+                            <Badge
+                              key={keyword}
+                              variant="outline"
+                              className="border-success/30 bg-success/10 text-success"
+                            >
+                              {keyword}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No matched skills found.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <AlertCircle className="h-4 w-4 text-warning" />
+                        Missing skills
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {result.missing.length ? (
+                          result.missing.map((keyword) => (
+                            <Badge
+                              key={keyword}
+                              variant="outline"
+                              className="border-warning/40 bg-warning/10 text-foreground"
+                            >
+                              {keyword}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No missing skills flagged.</span>
+                        )}
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Add these only when they honestly match your experience.
+                      </p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+    </div>
   );
 }
