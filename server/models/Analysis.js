@@ -8,6 +8,7 @@ const analysisSchema = new mongoose.Schema({
   matched: [String],
   missing: [String],
   suggestions: [String],
+  improvedResume: String,
 }, { timestamps: true });
 
 export default mongoose.model("Analysis", analysisSchema);
