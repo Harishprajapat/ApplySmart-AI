@@ -19,6 +19,27 @@ function extractJsonObject(text) {
   return cleanText.slice(firstBrace, lastBrace + 1);
 }
 
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
+function normalizeAnalysisPayload(parsed) {
+  return {
+    score: Number(parsed?.score) || 0,
+    matched: normalizeStringArray(parsed?.matched),
+    missing: normalizeStringArray(parsed?.missing),
+    suggestions: normalizeStringArray(parsed?.suggestions),
+    improvedResume:
+      typeof parsed?.improved_resume === "string" && parsed.improved_resume.trim()
+        ? parsed.improved_resume.trim()
+        : "",
+  };
+}
+
 function getCurrentMonthBounds() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -72,17 +93,23 @@ router.post("/", protect, async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-You are an ATS system.
+You are an AI Resume Analyzer.
 
-Analyze this resume against the job description.
+Analyze the resume based on the job description and return STRICT JSON.
 
-Return ONLY valid JSON in this shape:
+Return format:
 {
   "score": number (0-100),
-  "matched": [skills],
-  "missing": [skills],
-  "suggestions": [improvements]
+  "matched": [array of matched keywords],
+  "missing": [array of missing skills],
+  "suggestions": [array of improvements],
+  "improved_resume": "fully rewritten ATS optimized resume"
 }
+
+Rules:
+- Keep everything realistic
+- Do NOT add fake experience
+- Keep improved_resume well structured with bullet points
 
 Resume:
 ${resume}
@@ -94,17 +121,32 @@ ${jd}
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const rawText = response.text();
-    const jsonText = extractJsonObject(rawText);
-    const parsed = JSON.parse(jsonText);
+
+    let parsed;
+    try {
+      const jsonText = extractJsonObject(rawText);
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error("Failed to parse AI analysis response", {
+        message: parseError instanceof Error ? parseError.message : "Unknown parse error",
+        rawText,
+      });
+      return res.status(502).json({
+        error: "Invalid AI response. Please try again.",
+      });
+    }
+
+    const normalized = normalizeAnalysisPayload(parsed);
 
     const analysis = await Analysis.create({
       user: req.user,
       resume,
       jd,
-      score: Number(parsed.score) || 0,
-      matched: Array.isArray(parsed.matched) ? parsed.matched : [],
-      missing: Array.isArray(parsed.missing) ? parsed.missing : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      score: normalized.score,
+      matched: normalized.matched,
+      missing: normalized.missing,
+      suggestions: normalized.suggestions,
+      improvedResume: normalized.improvedResume,
     });
 
     const newUsed = used + 1;
@@ -114,6 +156,7 @@ ${jd}
       matched: analysis.matched,
       missing: analysis.missing,
       suggestions: analysis.suggestions,
+      improved_resume: analysis.improvedResume,
       id: analysis._id,
       usage: {
         plan: isFreePlan ? "free" : "pro",

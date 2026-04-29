@@ -25,6 +25,7 @@ interface AnalysisResult {
   matched: string[];
   missing: string[];
   suggestions: string[];
+  improved_resume: string;
   usage?: {
     plan: "free" | "pro";
     limit: number | null;
@@ -101,7 +102,7 @@ function ResumeAnalyzer() {
         body: JSON.stringify({ resume, jd }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
         if (res.status === 403 && data?.code === "PLAN_LIMIT_REACHED") {
           setLimitError(data?.message || "Free plan limit reached. Upgrade to Pro.");
@@ -130,9 +131,9 @@ function ResumeAnalyzer() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error analyzing resume";
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -341,19 +342,40 @@ function ResultsView({ result }: { result: AnalysisResult }) {
 
       <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
         <h2 className="text-lg font-semibold">AI Suggestions</h2>
-        <ul className="mt-4 space-y-3">
-          {result.suggestions.map((s, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-3 rounded-xl border border-border/40 bg-muted/30 p-4 transition-colors hover:bg-muted/60"
-            >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
-                {i + 1}
-              </div>
-              <span className="text-sm">{s}</span>
-            </li>
-          ))}
-        </ul>
+        {result.suggestions.length ? (
+          <ul className="mt-4 space-y-3">
+            {result.suggestions.map((s, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-xl border border-border/40 bg-muted/30 p-4 transition-colors hover:bg-muted/60"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
+                  {i + 1}
+                </div>
+                <span className="text-sm">{s}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">
+            No suggestions were returned for this analysis.
+          </p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
+        <h2 className="text-lg font-semibold">Improved Resume</h2>
+        {result.improved_resume ? (
+          <div className="mt-4 rounded-xl border border-border/40 bg-muted/20 p-4">
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground">
+              {result.improved_resume}
+            </pre>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">
+            We could not generate an improved resume this time. Please try again.
+          </p>
+        )}
       </div>
     </>
   );
