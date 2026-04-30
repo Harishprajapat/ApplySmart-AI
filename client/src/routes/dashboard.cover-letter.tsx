@@ -1,58 +1,201 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Copy, Loader2, RefreshCw, Wand2, Check } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  Copy,
+  Download,
+  FileText,
+  Loader2,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/cover-letter")({
   component: CoverLetterPage,
 });
 
-const sampleLetter = (role: string, company: string) => `Dear Hiring Manager,
+interface UsageInfo {
+  plan: "free" | "pro";
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  blocked: boolean;
+}
 
-I'm writing to express my strong interest in the ${role || "open"} role${company ? ` at ${company}` : ""}. After reviewing the job description, I'm excited by the opportunity to contribute to a team that values craft, ownership, and shipping work that matters.
+let jsPdfPromise: Promise<any> | null = null;
 
-In my most recent role, I led the redesign of our onboarding experience, which lifted activation by 34% within a single quarter. I partnered closely with engineering and research, ran weekly user interviews, and turned messy qualitative insights into a roadmap the team rallied around. The skills I built there — clear systems thinking, decisive trade-offs, and a bias for shipping — map directly to what you've described in this role.
+async function getJsPdf() {
+  if (!jsPdfPromise) {
+    jsPdfPromise = import("jspdf").then((module) => module.jsPDF);
+  }
 
-What draws me to ${company || "your company"} specifically is the focus on building products people genuinely love using every day. I'd love to bring that same energy to your team and help you raise the bar even higher.
-
-I've attached my resume and would love the chance to discuss how I can contribute. Thank you for your time and consideration.
-
-Warm regards,
-Alex Smith`;
+  return jsPdfPromise;
+}
 
 function CoverLetterPage() {
   const [resume, setResume] = useState("");
-  const [role, setRole] = useState("");
-  const [company, setCompany] = useState("");
+  const [jd, setJd] = useState("");
+  const [coverLetter, setCoverLetter] = useState("");
   const [loading, setLoading] = useState(false);
-  const [letter, setLetter] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
 
-  const generate = () => {
-    if (!resume.trim() || !role.trim()) {
-      toast.error("Please add your resume and the job role.");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/cover-letter/usage", {
+          headers: { Authorization: token },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setUsage(data);
+      } catch {
+        setUsage(null);
+      }
+    };
+
+    fetchUsage();
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!resume.trim() || !jd.trim()) {
+      toast.error("Please add both your resume and the job description.");
       return;
     }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please log in to generate a cover letter.");
+      return;
+    }
+
     setLoading(true);
-    setLetter(null);
-    setTimeout(() => {
-      setLetter(sampleLetter(role, company));
-      setLoading(false);
+    setCoverLetter("");
+    setLimitError(null);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/cover-letter/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ resume, jd }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 403 && data?.code === "PLAN_LIMIT_REACHED") {
+          const message = data?.message || "Free plan limit reached. Upgrade to Pro.";
+          setLimitError(message);
+          setUsage({
+            plan: "free",
+            limit: data?.limit ?? 5,
+            used: data?.used ?? 5,
+            remaining: 0,
+            blocked: true,
+          });
+          toast.error(message);
+          return;
+        }
+
+        if (response.status === 401) {
+          throw new Error(data?.message || "Your session has expired. Please log in again.");
+        }
+
+        throw new Error(data?.error || data?.message || "Failed to generate cover letter");
+      }
+
+      setCoverLetter(data?.coverLetter || "");
+      if (data?.usage) {
+        setUsage({
+          ...data.usage,
+          blocked: data.usage.plan === "free" && data.usage.remaining === 0,
+        });
+      }
       toast.success("Cover letter ready!");
-    }, 1800);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to generate cover letter";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const copy = async () => {
-    if (!letter) return;
-    await navigator.clipboard.writeText(letter);
-    setCopied(true);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (!coverLetter) {
+      toast.error("No cover letter is available to copy yet.");
+      return;
+    }
+
+    try {
+      setCopying(true);
+      await navigator.clipboard.writeText(coverLetter);
+      toast.success("Cover letter copied to clipboard.");
+    } catch {
+      toast.error("Could not copy the cover letter. Please try again.");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!coverLetter) {
+      toast.error("No cover letter is available to download yet.");
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      const JsPdf = await getJsPdf();
+      const doc = new JsPdf({ unit: "pt", format: "a4" });
+      const marginX = 54;
+      const topMargin = 64;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const contentWidth = pageWidth - marginX * 2;
+      const maxY = pageHeight - 56;
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(17);
+      doc.text("Cover Letter", marginX, topMargin);
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11.5);
+
+      let y = topMargin + 28;
+      const paragraphs = coverLetter.split("\n").map((line) => line.trim());
+
+      paragraphs.forEach((paragraph) => {
+        const lines = doc.splitTextToSize(paragraph || " ", contentWidth) as string[];
+        const blockHeight = Math.max(lines.length, 1) * 16 + 6;
+
+        if (y + blockHeight > maxY) {
+          doc.addPage();
+          y = topMargin;
+        }
+
+        doc.text(lines, marginX, y);
+        y += blockHeight;
+      });
+
+      doc.save("cover-letter.pdf");
+      toast.success("PDF downloaded.");
+    } catch {
+      toast.error("Could not generate the PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -60,95 +203,158 @@ function CoverLetterPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Cover Letter Generator</h1>
         <p className="mt-1.5 text-muted-foreground">
-          Personalized to your resume and the role. Ready in 15 seconds.
+          Generate a personalized, job-aligned cover letter from your resume and the JD.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-2">
+      {usage && (
+        <div className="rounded-2xl border border-border/60 bg-card p-4 text-sm shadow-soft">
+          {usage.plan === "pro" ? (
+            <p className="text-muted-foreground">Pro plan: Unlimited cover letter generations this month.</p>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-muted-foreground">
+                Free plan: {usage.used}/{usage.limit ?? 5} cover letters used this month.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/pricing">Upgrade</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {limitError && (
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
+          <p className="font-medium">{limitError}</p>
+          <Button variant="hero" size="sm" className="mt-3" asChild>
+            <Link to="/pricing">Upgrade to Pro</Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-            <Label>Your resume</Label>
+            <Label className="text-sm font-semibold">Your resume</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Paste the latest version of your resume in plain text.
+            </p>
             <Textarea
               value={resume}
-              onChange={(e) => setResume(e.target.value)}
-              placeholder="Paste your resume…"
-              className="mt-3 min-h-48 resize-none"
+              onChange={(event) => setResume(event.target.value)}
+              placeholder="Paste your resume here..."
+              className="mt-3 min-h-72 resize-none"
             />
+            <p className="mt-3 text-xs text-muted-foreground">{resume.length} characters</p>
           </div>
+
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-            <div className="grid gap-4">
-              <div>
-                <Label>Job role</Label>
-                <Input
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  placeholder="e.g. Senior Product Designer"
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label>Company (optional)</Label>
-                <Input
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder="e.g. Stripe"
-                  className="mt-2"
-                />
-              </div>
-            </div>
-            <Button variant="hero" className="mt-5 w-full" size="lg" onClick={generate} disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" /> Generating…
-                </>
-              ) : (
-                <>
-                  <Wand2 /> Generate cover letter
-                </>
-              )}
-            </Button>
+            <Label className="text-sm font-semibold">Job description</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Include responsibilities, required skills, and company context for a stronger result.
+            </p>
+            <Textarea
+              value={jd}
+              onChange={(event) => setJd(event.target.value)}
+              placeholder="Paste the full job description here..."
+              className="mt-3 min-h-72 resize-none"
+            />
+            <p className="mt-3 text-xs text-muted-foreground">{jd.length} characters</p>
           </div>
+
+          <Button
+            variant="hero"
+            size="xl"
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={loading || Boolean(usage?.blocked)}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 />
+                {usage?.blocked ? "Limit reached" : "Generate cover letter"}
+              </>
+            )}
+          </Button>
         </div>
 
-        <div className="lg:col-span-3">
-          <div className="sticky top-24 rounded-2xl border border-border/60 bg-card shadow-soft">
-            <div className="flex items-center justify-between border-b border-border/60 p-4">
-              <div className="text-sm font-semibold">Your cover letter</div>
-              <div className="flex gap-1.5">
-                <Button variant="ghost" size="sm" onClick={generate} disabled={!letter || loading}>
-                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-                </Button>
-                <Button variant="outline" size="sm" onClick={copy} disabled={!letter}>
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? "Copied" : "Copy"}
-                </Button>
+        <div className="rounded-[28px] border border-border/60 bg-card shadow-soft">
+          <div className="flex flex-col gap-4 border-b border-border/60 p-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Draft
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">Your generated cover letter</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The draft stays grounded in the resume details you provided.
+                </p>
               </div>
             </div>
-            <div className="min-h-[28rem] p-6">
-              {loading && (
-                <div className="space-y-3">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-4" style={{ width: `${60 + Math.random() * 40}%` }} />
-                  ))}
-                </div>
-              )}
-              {!loading && !letter && (
-                <div className="flex h-96 flex-col items-center justify-center text-center text-muted-foreground">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent">
-                    <Wand2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <p className="mt-4 text-sm">Your cover letter will appear here.</p>
-                </div>
-              )}
-              {!loading && letter && (
-                <pre className="animate-fade-in whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                  {letter}
-                </pre>
-              )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleCopy} disabled={copying || !coverLetter}>
+                <Copy />
+                {copying ? "Copying..." : "Copy"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadPdf}
+                disabled={downloading || !coverLetter}
+              >
+                <Download />
+                {downloading ? "Preparing PDF..." : "Download PDF"}
+              </Button>
             </div>
+          </div>
+
+          <div className="min-h-[38rem] p-5 sm:p-6">
+            {loading && <CoverLetterSkeleton />}
+
+            {!loading && !coverLetter && (
+              <div className="flex h-full min-h-[32rem] flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">Your draft will appear here</h3>
+                <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                  Add your resume and the job description, then generate a tailored cover letter you can copy or export.
+                </p>
+              </div>
+            )}
+
+            {!loading && coverLetter && (
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-5">
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-foreground">
+                  {coverLetter}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CoverLetterSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-6 w-48" />
+      {Array.from({ length: 10 }).map((_, index) => (
+        <Skeleton
+          key={index}
+          className="h-4"
+          style={{ width: `${index % 3 === 0 ? 92 : index % 3 === 1 ? 84 : 76}%` }}
+        />
+      ))}
     </div>
   );
 }
