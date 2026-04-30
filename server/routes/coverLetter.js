@@ -103,7 +103,22 @@ STRICT RULES — follow every one:
 1. Maximum 3 paragraphs. No more. Total length: 250–320 words.
 2. Paragraph 1: Open with a specific achievement or project from the resume that directly relates to the JD. Not "I am writing to..." — skip that entirely.
 3. Paragraph 2: Pick the 2 most relevant technical skills or projects from the resume that match the JD requirements. Connect them explicitly. Do not list everything.
-4. Paragraph 3: One sentence on why this company specifically (use the company name). One sentence on what you will bring, written with confidence ("I will", not "I hope to"). End with a clear CTA.
+4. Paragraph 3 (closing — 3 sentences max):
+- Sentence 1: Reference ONE specific thing from the job description itself
+  (a technology, a responsibility, a team structure, or a product they mentioned).
+  Not a generic compliment about the company culture.
+- Sentence 2: State what you will bring, using "I will" — not "I hope to",
+  "I am eager to", or "I am excited by". Be direct.
+- Sentence 3: "I'd welcome the opportunity to discuss this further."
+  Nothing more. Clean close.
+
+BANNED words and phrases in the entire letter (add to your existing list):
+- "eager"
+- "excited by the prospect"
+- "contribute significantly"  
+- "ideal setting"
+- "collaborative environment" (unless it's a direct quote from the JD)
+- "innovative team"
 5. Tone: confident, direct, human. Not formal, not robotic, not desperate.
 6. Do NOT use these phrases: "I am writing to", "enthusiastic interest", "eager to contribute", "passion for", "I am excited by the prospect".
 7. Address: "Dear Hiring Manager," — keep this.
