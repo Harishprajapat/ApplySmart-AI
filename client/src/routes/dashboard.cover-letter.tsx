@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Copy,
   Download,
+  FileUp,
   FileText,
   Loader2,
   Sparkles,
@@ -26,7 +27,26 @@ interface UsageInfo {
   blocked: boolean;
 }
 
+let pdfjsLibPromise: Promise<any> | null = null;
 let jsPdfPromise: Promise<any> | null = null;
+
+async function getPdfJs() {
+  if (typeof window === "undefined") {
+    throw new Error("PDF parsing is only available in the browser.");
+  }
+
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = Promise.all([
+      import("pdfjs-dist"),
+      import("pdfjs-dist/build/pdf.worker?url"),
+    ]).then(([pdfjsLib, workerModule]) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+
+  return pdfjsLibPromise;
+}
 
 async function getJsPdf() {
   if (!jsPdfPromise) {
@@ -65,6 +85,45 @@ function CoverLetterPage() {
 
     fetchUsage();
   }, []);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      try {
+        const pdfjsLib = await getPdfJs();
+        const typedArray = new Uint8Array(reader.result as ArrayBuffer);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+
+        let fullText = "";
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: any) => item.str);
+          fullText += `${strings.join(" ")}\n`;
+        }
+
+        setResume(fullText.trim());
+        toast.success("Resume PDF uploaded successfully.");
+      } catch {
+        toast.error("Could not read this PDF. Please try another file.");
+      } finally {
+        event.target.value = "";
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
 
   const handleGenerate = async () => {
     if (!resume.trim() || !jd.trim()) {
@@ -238,7 +297,7 @@ function CoverLetterPage() {
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
             <Label className="text-sm font-semibold">Your resume</Label>
             <p className="mt-1 text-xs text-muted-foreground">
-              Paste the latest version of your resume in plain text.
+              Paste the latest version of your resume or upload a PDF.
             </p>
             <Textarea
               value={resume}
@@ -246,7 +305,22 @@ function CoverLetterPage() {
               placeholder="Paste your resume here..."
               className="mt-3 min-h-72 resize-none"
             />
-            <p className="mt-3 text-xs text-muted-foreground">{resume.length} characters</p>
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>{resume.length} characters</span>
+              <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-primary hover:underline">
+                <FileUp className="h-3.5 w-3.5" />
+                Upload PDF instead
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Supports PDF resumes with automatic text extraction.
+            </p>
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">

@@ -25,7 +25,11 @@ async function getMonthlyUsage(userId) {
 function isRetryableGeminiError(error) {
   const status = error?.status ?? error?.statusCode ?? error?.response?.status;
   const message = typeof error?.message === "string" ? error.message : "";
-  return status === 503 || message.includes("503") || message.toLowerCase().includes("unavailable");
+  return (
+    status === 503 ||
+    message.includes("503") ||
+    message.toLowerCase().includes("unavailable")
+  );
 }
 
 function wait(ms) {
@@ -53,7 +57,12 @@ router.post("/generate", protect, async (req, res) => {
   try {
     const { resume, jd } = req.body;
 
-    if (typeof resume !== "string" || typeof jd !== "string" || !resume.trim() || !jd.trim()) {
+    if (
+      typeof resume !== "string" ||
+      typeof jd !== "string" ||
+      !resume.trim() ||
+      !jd.trim()
+    ) {
       return res.status(400).json({
         error: "Resume and job description are required",
       });
@@ -86,27 +95,29 @@ router.post("/generate", protect, async (req, res) => {
     }
 
     const prompt = `
-You are an expert career writing assistant.
+You are an expert career coach who writes cover letters that get interviews.
 
-Task:
-- Analyze the job description carefully.
-- Match the strongest, real qualifications from the candidate resume.
-- Write a personalized cover letter between 250 and 300 words.
+Write a cover letter using the resume and job description below.
 
-Rules:
-- Use a professional, polished, and human tone.
-- Sound specific and confident, not generic or robotic.
-- Only mention skills, achievements, tools, and experiences that are supported by the resume.
-- Do not hallucinate qualifications, metrics, certifications, employers, or projects.
-- Make the letter clearly aligned to the job description.
-- Keep it ready to send with a greeting, body, and closing.
-- Return only the final cover letter text with no markdown fences or notes.
+STRICT RULES — follow every one:
+1. Maximum 3 paragraphs. No more. Total length: 250–320 words.
+2. Paragraph 1: Open with a specific achievement or project from the resume that directly relates to the JD. Not "I am writing to..." — skip that entirely.
+3. Paragraph 2: Pick the 2 most relevant technical skills or projects from the resume that match the JD requirements. Connect them explicitly. Do not list everything.
+4. Paragraph 3: One sentence on why this company specifically (use the company name). One sentence on what you will bring, written with confidence ("I will", not "I hope to"). End with a clear CTA.
+5. Tone: confident, direct, human. Not formal, not robotic, not desperate.
+6. Do NOT use these phrases: "I am writing to", "enthusiastic interest", "eager to contribute", "passion for", "I am excited by the prospect".
+7. Address: "Dear Hiring Manager," — keep this.
+8. Sign off: "Sincerely," then the candidate's full name from the resume.
 
 Resume:
 ${resume.trim()}
 
+
 Job Description:
 ${jd.trim()}
+
+Return only the cover letter text. No explanation, no preamble.
+
 `;
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -135,7 +146,9 @@ ${jd.trim()}
         plan: isFreePlan ? "free" : "pro",
         limit: isFreePlan ? FREE_MONTHLY_LIMIT : null,
         used: newUsed,
-        remaining: isFreePlan ? Math.max(FREE_MONTHLY_LIMIT - newUsed, 0) : null,
+        remaining: isFreePlan
+          ? Math.max(FREE_MONTHLY_LIMIT - newUsed, 0)
+          : null,
       },
     });
   } catch (error) {
@@ -143,7 +156,8 @@ ${jd.trim()}
 
     if (isRetryableGeminiError(error)) {
       return res.status(503).json({
-        error: "Gemini is temporarily unavailable. Please try again in a moment.",
+        error:
+          "Gemini is temporarily unavailable. Please try again in a moment.",
       });
     }
 
