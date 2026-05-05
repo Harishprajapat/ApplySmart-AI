@@ -1,11 +1,11 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Analysis from "../models/Analysis.js";
-import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { checkUsageLimit } from "../middleware/checkUsageLimit.js";
+import { buildUsagePayload, syncAnalysisUsage } from "../utils/analysisUsage.js";
 
 const router = express.Router();
-const FREE_MONTHLY_LIMIT = 5;
 
 function extractJsonObject(text) {
   const cleanText = text.replace(/```json|```/g, "").trim();
@@ -40,54 +40,45 @@ function normalizeAnalysisPayload(parsed) {
   };
 }
 
-function getCurrentMonthBounds() {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return { startOfMonth, startOfNextMonth };
+function validateAnalyzeRequest(req, res, next) {
+  const { resume, jd } = req.body;
+
+  if (!resume || !jd) {
+    return res.status(400).json({ error: "Resume and job description are required" });
+  }
+
+  next();
 }
 
-async function getMonthlyUsage(userId) {
-  const { startOfMonth, startOfNextMonth } = getCurrentMonthBounds();
-  return Analysis.countDocuments({
-    user: userId,
-    createdAt: { $gte: startOfMonth, $lt: startOfNextMonth },
-  });
+function ensureGeminiApiKey(req, res, next) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({
+      error: "Missing Gemini API key. Set GEMINI_API_KEY in server/.env.",
+    });
+  }
+
+  req.geminiApiKey = apiKey;
+  next();
 }
 
-router.post("/", protect, async (req, res) => {
+async function rollbackReservedUsage(req) {
+  if (typeof req.releaseUsageReservation === "function") {
+    try {
+      await req.releaseUsageReservation();
+    } catch (rollbackError) {
+      console.error("Failed to rollback reserved analysis usage", rollbackError);
+    }
+  }
+}
+
+router.post("/", protect, validateAnalyzeRequest, ensureGeminiApiKey, checkUsageLimit, async (req, res) => {
+  let shouldRollbackUsage = true;
+
   try {
     const { resume, jd } = req.body;
-
-    if (!resume || !jd) {
-      return res.status(400).json({ error: "Resume and job description are required" });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({
-        error: "Missing Gemini API key. Set GEMINI_API_KEY in server/.env.",
-      });
-    }
-
-    const user = await User.findById(req.user).select("plan");
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const used = await getMonthlyUsage(req.user);
-    const isFreePlan = user.plan !== "pro";
-
-    if (isFreePlan && used >= FREE_MONTHLY_LIMIT) {
-      return res.status(403).json({
-        code: "PLAN_LIMIT_REACHED",
-        message: `Free plan limit reached (${FREE_MONTHLY_LIMIT}/${FREE_MONTHLY_LIMIT} this month). Upgrade to Pro for unlimited analyses.`,
-        upgradeRequired: true,
-        plan: "free",
-        limit: FREE_MONTHLY_LIMIT,
-        used,
-      });
-    }
+    const apiKey = req.geminiApiKey;
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -131,6 +122,8 @@ ${jd}
         message: parseError instanceof Error ? parseError.message : "Unknown parse error",
         rawText,
       });
+      await rollbackReservedUsage(req);
+      shouldRollbackUsage = false;
       return res.status(502).json({
         error: "Invalid AI response. Please try again.",
       });
@@ -149,7 +142,8 @@ ${jd}
       improvedResume: normalized.improvedResume,
     });
 
-    const newUsed = used + 1;
+    shouldRollbackUsage = false;
+    const usage = buildUsagePayload(req.usageUser);
 
     res.json({
       score: analysis.score,
@@ -158,36 +152,27 @@ ${jd}
       suggestions: analysis.suggestions,
       improved_resume: analysis.improvedResume,
       id: analysis._id,
-      usage: {
-        plan: isFreePlan ? "free" : "pro",
-        limit: isFreePlan ? FREE_MONTHLY_LIMIT : null,
-        used: newUsed,
-        remaining: isFreePlan ? Math.max(FREE_MONTHLY_LIMIT - newUsed, 0) : null,
-      },
+      usage,
     });
   } catch (err) {
     console.error(err);
+
+    if (shouldRollbackUsage) {
+      await rollbackReservedUsage(req);
+    }
+
     res.status(500).json({ error: "AI error" });
   }
 });
 
 router.get("/usage", protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user).select("plan");
+    const user = await syncAnalysisUsage(req.user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const used = await getMonthlyUsage(req.user);
-    const isFreePlan = user.plan !== "pro";
-
-    res.json({
-      plan: isFreePlan ? "free" : "pro",
-      limit: isFreePlan ? FREE_MONTHLY_LIMIT : null,
-      used,
-      remaining: isFreePlan ? Math.max(FREE_MONTHLY_LIMIT - used, 0) : null,
-      blocked: isFreePlan ? used >= FREE_MONTHLY_LIMIT : false,
-    });
+    res.json(buildUsagePayload(user));
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch usage" });
   }
