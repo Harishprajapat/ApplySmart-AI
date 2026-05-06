@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    coverLettersUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     plan: {
       type: String,
       enum: ["free", "pro"],
