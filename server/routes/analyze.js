@@ -4,6 +4,10 @@ import Analysis from "../models/Analysis.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { checkUsageLimit } from "../middleware/checkUsageLimit.js";
 import {
+  createAIHistoryEntry,
+  createResumeHistoryPayload,
+} from "../utils/aiHistoryService.js";
+import {
   USAGE_FIELDS,
   USAGE_LIMITS,
   buildUsagePayload,
@@ -147,6 +151,21 @@ ${jd}
       improvedResume: normalized.improvedResume,
     });
 
+    try {
+      await createAIHistoryEntry(
+        createResumeHistoryPayload({
+          userId: req.user,
+          atsScore: normalized.score,
+          matchedSkills: normalized.matched,
+          missingSkills: normalized.missing,
+          suggestions: normalized.suggestions,
+          content: normalized.improvedResume,
+        }),
+      );
+    } catch (historyError) {
+      console.error("Failed to record resume AI history", historyError);
+    }
+
     shouldRollbackUsage = false;
     const usage = buildUsagePayload(
       req.usageUser,
@@ -184,15 +203,6 @@ router.get("/usage", protect, async (req, res) => {
     res.json(buildUsagePayload(user, USAGE_FIELDS.analysis, USAGE_LIMITS.analysis));
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch usage" });
-  }
-});
-
-router.get("/history", protect, async (req, res) => {
-  try {
-    const analyses = await Analysis.find({ user: req.user }).sort({ createdAt: -1 });
-    res.json(analyses);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch history" });
   }
 });
 

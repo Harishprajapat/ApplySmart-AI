@@ -18,6 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import {
+  type AIHistoryItem,
+  fetchAIHistory,
+  getAIHistoryTypeLabel,
+} from "@/lib/ai-history";
 
 export const Route = createFileRoute("/dashboard/")({
   component: DashboardHome,
@@ -61,15 +66,9 @@ const quickActions = [
   },
 ] as const;
 
-type AnalysisItem = {
-  _id: string;
-  score: number;
-  createdAt: string;
-};
-
 function DashboardHome() {
   const { user } = useCurrentUser();
-  const [recentActivity, setRecentActivity] = useState<AnalysisItem[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AIHistoryItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
 
   useEffect(() => {
@@ -81,19 +80,8 @@ function DashboardHome() {
 
     const fetchRecentActivity = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/analyze/history", {
-          headers: {
-            Authorization: token,
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok || !Array.isArray(data)) {
-          setRecentActivity([]);
-          return;
-        }
-
-        setRecentActivity(data.slice(0, 4));
+        const data = await fetchAIHistory(token, { limit: 4 });
+        setRecentActivity(data.items);
       } catch {
         setRecentActivity([]);
       } finally {
@@ -184,20 +172,30 @@ function DashboardHome() {
             </div>
           ) : recentActivity.length === 0 ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-              No recent analyses yet. Run a resume analysis to see activity here.
+              No AI history yet. Generate a resume analysis or cover letter to see activity here.
             </div>
           ) : (
             <ul className="divide-y divide-border/60">
               {recentActivity.map((item) => (
                 <li key={item._id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                   <div>
-                    <div className="text-sm font-medium">Resume analysis completed</div>
+                    <div className="text-sm font-medium">{item.title}</div>
                     <div className="text-xs text-muted-foreground">
+                      {getAIHistoryTypeLabel(item.type)} -{" "}
                       {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                     </div>
                   </div>
-                  <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
-                    {item.score}% match
+                  <Badge
+                    variant="outline"
+                    className={
+                      item.type === "resume"
+                        ? "border-success/30 bg-success/10 text-success"
+                        : "border-primary/30 bg-primary/10 text-primary"
+                    }
+                  >
+                    {item.type === "resume" && item.data.atsScore != null
+                      ? `${item.data.atsScore}% match`
+                      : "Cover letter"}
                   </Badge>
                 </li>
               ))}

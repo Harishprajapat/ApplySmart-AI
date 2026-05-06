@@ -4,6 +4,10 @@ import CoverLetter from "../models/CoverLetter.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { checkCoverLimit } from "../middleware/checkCoverLimit.js";
 import {
+  createAIHistoryEntry,
+  createCoverLetterHistoryPayload,
+} from "../utils/aiHistoryService.js";
+import {
   USAGE_FIELDS,
   USAGE_LIMITS,
   buildUsagePayload,
@@ -145,6 +149,17 @@ Return only the cover letter text. No explanation, no preamble.
         jd: jd.trim(),
         content: coverLetter,
       });
+
+      try {
+        await createAIHistoryEntry(
+          createCoverLetterHistoryPayload({
+            userId: req.user,
+            content: coverLetter,
+          }),
+        );
+      } catch (historyError) {
+        console.error("Failed to record cover letter AI history", historyError);
+      }
 
       shouldRollbackUsage = false;
       const usage = buildUsagePayload(
