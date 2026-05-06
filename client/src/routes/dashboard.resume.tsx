@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Sparkles,
   Loader2,
@@ -13,6 +13,10 @@ import {
   FileText,
   ListChecks,
   Search,
+  FileUp,
+  Eye,
+  Trash2,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,12 +101,16 @@ function isLikelyHeading(line: string) {
 }
 
 function ResumeAnalyzer() {
-  const [resume, setResume] = useState("");
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [parsedResumeText, setParsedResumeText] = useState("");
   const [jd, setJd] = useState("");
   const [loading, setLoading] = useState(false);
+  const [parsingResume, setParsingResume] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -124,9 +132,23 @@ function ResumeAnalyzer() {
     fetchUsage();
   }, []);
 
+  useEffect(() => {
+    if (!resumeFile) {
+      setResumePreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(resumeFile);
+    setResumePreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [resumeFile]);
+
   const handleAnalyze = async () => {
-    if (!resume.trim() || !jd.trim()) {
-      toast.error("Please add both your resume and the job description.");
+    if (!parsedResumeText.trim() || !jd.trim()) {
+      toast.error("Please upload your resume PDF and add the job description.");
       return;
     }
 
@@ -141,7 +163,7 @@ function ResumeAnalyzer() {
           "Content-Type": "application/json",
           Authorization: localStorage.getItem("token") || "",
         },
-        body: JSON.stringify({ resume, jd }),
+        body: JSON.stringify({ resume: parsedResumeText, jd }),
       });
 
       const data = await res.json().catch(() => null);
@@ -178,16 +200,22 @@ function ResumeAnalyzer() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleResumeFileSelection = async (file: File | null) => {
     if (!file) return;
 
     if (file.type !== "application/pdf") {
       toast.error("Please upload a PDF file");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const reader = new FileReader();
+    setParsingResume(true);
+    setResumeFile(file);
+    setParsedResumeText("");
+    setResult(null);
 
     reader.onload = async () => {
       try {
@@ -204,14 +232,59 @@ function ResumeAnalyzer() {
           fullText += strings.join(" ") + "\n";
         }
 
-        setResume(fullText);
+        setParsedResumeText(fullText);
         toast.success("PDF uploaded successfully!");
       } catch {
+        setResumeFile(null);
+        setParsedResumeText("");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         toast.error("Could not read this PDF. Please try another file.");
+      } finally {
+        setParsingResume(false);
       }
     };
 
+    reader.onerror = () => {
+      setResumeFile(null);
+      setParsedResumeText("");
+      setParsingResume(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      toast.error("Could not read this PDF. Please try another file.");
+    };
+
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    await handleResumeFileSelection(file);
+  };
+
+  const handleRemoveResume = () => {
+    setResumeFile(null);
+    setParsedResumeText("");
+    setParsingResume(false);
+    setResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleReplaceResume = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePreviewResume = () => {
+    if (!resumePreviewUrl) {
+      toast.error("Preview is not available for this file yet.");
+      return;
+    }
+
+    window.open(resumePreviewUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -219,7 +292,7 @@ function ResumeAnalyzer() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Resume Analyzer</h1>
         <p className="mt-1.5 text-muted-foreground">
-          Paste your resume and the job description. Get an ATS score and suggestions in seconds.
+          Upload your resume PDF and paste the job description. Get an ATS score and suggestions in seconds.
         </p>
       </div>
 
@@ -252,26 +325,76 @@ function ResumeAnalyzer() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
           <Label className="text-sm font-semibold">Your resume</Label>
-          <p className="mt-1 text-xs text-muted-foreground">Paste plain text or upload a PDF.</p>
-          <Textarea
-            value={resume}
-            onChange={(e) => setResume(e.target.value)}
-            placeholder="Paste your resume here..."
-            className="mt-3 min-h-64 resize-none"
+          <p className="mt-1 text-xs text-muted-foreground">
+            Upload a PDF and we will extract the content in the background for analysis.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleFileUpload}
           />
-          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{resume.length} characters</span>
-            <label className="cursor-pointer font-medium text-primary hover:underline">
-              Upload PDF instead
-              <input
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </label>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">Supports PDF resumes (auto-extracted)</p>
+
+          {!resumeFile ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-4 flex min-h-64 w-full flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 bg-muted/20 px-6 text-center transition-all hover:border-primary/40 hover:bg-primary/5"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground shadow-soft">
+                <FileUp className="h-6 w-6" />
+              </div>
+              <div className="mt-5 text-base font-semibold">Upload your resume PDF</div>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                Drag-and-drop is not required here. Just choose a PDF and we will keep the extracted text hidden while analysis runs.
+              </p>
+              <span className="mt-5 inline-flex items-center rounded-full border border-border/60 bg-background px-3 py-1 text-xs text-muted-foreground">
+                PDF only
+              </span>
+            </button>
+          ) : (
+            <div className="mt-4 rounded-3xl border border-border/70 bg-muted/20 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    {parsingResume ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">{resumeFile.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {formatFileSize(resumeFile.size)}
+                    </div>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-medium text-success">
+                      {parsingResume ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {parsingResume ? "Extracting text..." : "Uploaded successfully"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviewResume}
+                    disabled={!resumePreviewUrl}
+                  >
+                    <Eye />
+                    Preview PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleReplaceResume}>
+                    <RefreshCcw />
+                    Replace file
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleRemoveResume}>
+                    <Trash2 />
+                    Remove file
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
@@ -292,11 +415,15 @@ function ResumeAnalyzer() {
           variant="hero"
           size="xl"
           onClick={handleAnalyze}
-          disabled={loading || Boolean(usage?.blocked)}
+          disabled={loading || parsingResume || Boolean(usage?.blocked)}
         >
           {loading ? (
             <>
               <Loader2 className="animate-spin" /> Analyzing...
+            </>
+          ) : parsingResume ? (
+            <>
+              <Loader2 className="animate-spin" /> Preparing resume...
             </>
           ) : (
             <>
@@ -314,6 +441,18 @@ function ResumeAnalyzer() {
       )}
     </div>
   );
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function ResultsSkeleton() {
