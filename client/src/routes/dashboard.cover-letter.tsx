@@ -158,8 +158,8 @@ function CoverLetterPage() {
           setLimitError(message);
           setUsage({
             plan: "free",
-            limit: data?.limit ?? 5,
-            used: data?.used ?? 5,
+            limit: data?.limit ?? 3,
+            used: data?.used ?? 3,
             remaining: 0,
             blocked: true,
           });

@@ -3,7 +3,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Analysis from "../models/Analysis.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { checkUsageLimit } from "../middleware/checkUsageLimit.js";
-import { buildUsagePayload, syncAnalysisUsage } from "../utils/analysisUsage.js";
+import {
+  USAGE_FIELDS,
+  USAGE_LIMITS,
+  buildUsagePayload,
+  syncUsage,
+} from "../utils/usageService.js";
 
 const router = express.Router();
 
@@ -143,7 +148,11 @@ ${jd}
     });
 
     shouldRollbackUsage = false;
-    const usage = buildUsagePayload(req.usageUser);
+    const usage = buildUsagePayload(
+      req.usageUser,
+      USAGE_FIELDS.analysis,
+      USAGE_LIMITS.analysis,
+    );
 
     res.json({
       score: analysis.score,
@@ -167,12 +176,12 @@ ${jd}
 
 router.get("/usage", protect, async (req, res) => {
   try {
-    const user = await syncAnalysisUsage(req.user);
+    const user = await syncUsage(req.user);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(buildUsagePayload(user));
+    res.json(buildUsagePayload(user, USAGE_FIELDS.analysis, USAGE_LIMITS.analysis));
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch usage" });
   }

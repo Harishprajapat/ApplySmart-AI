@@ -7,9 +7,13 @@ import {
   syncUsage,
 } from "../utils/usageService.js";
 
-export async function checkUsageLimit(req, res, next) {
+export async function checkCoverLimit(req, res, next) {
   try {
-    const user = await reserveUsage(req.user, USAGE_FIELDS.analysis, USAGE_LIMITS.analysis);
+    const user = await reserveUsage(
+      req.user,
+      USAGE_FIELDS.coverLetter,
+      USAGE_LIMITS.coverLetter,
+    );
 
     if (!user) {
       const syncedUser = await syncUsage(req.user);
@@ -20,13 +24,12 @@ export async function checkUsageLimit(req, res, next) {
 
       const usage = buildUsagePayload(
         syncedUser,
-        USAGE_FIELDS.analysis,
-        USAGE_LIMITS.analysis,
+        USAGE_FIELDS.coverLetter,
+        USAGE_LIMITS.coverLetter,
       );
 
       return res.status(403).json({
-        code: "PLAN_LIMIT_REACHED",
-        message: "Limit reached",
+        message: "Cover letter limit reached",
         upgradeRequired: true,
         ...usage,
       });
@@ -34,12 +37,12 @@ export async function checkUsageLimit(req, res, next) {
 
     req.usageUser = user;
     req.releaseUsageReservation = async () => {
-      await rollbackUsage(req.user, USAGE_FIELDS.analysis);
+      await rollbackUsage(req.user, USAGE_FIELDS.coverLetter);
     };
 
     next();
   } catch (error) {
-    console.error("Failed to reserve analysis usage", error);
+    console.error("Failed to reserve cover letter usage", error);
     res.status(500).json({ message: "Failed to validate usage limit" });
   }
 }
