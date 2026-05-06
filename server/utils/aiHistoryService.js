@@ -1,4 +1,4 @@
-\import AIHistory from "../models/AIHistory.js";
+import AIHistory from "../models/AIHistory.js";
 
 export const AI_HISTORY_TYPES = {
   resume: "resume",
