@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { Github, Linkedin } from "lucide-react";
 import { Logo } from "@/components/logo";
-import { Github, Twitter, Linkedin } from "lucide-react";
 
 const cols = [
   {
@@ -31,6 +31,19 @@ const cols = [
   },
 ];
 
+const socialLinks = [
+  {
+    label: "GitHub",
+    href: "https://github.com/Harishprajapat",
+    icon: Github,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/harish-prajapat",
+    icon: Linkedin,
+  },
+];
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/60 bg-background">
@@ -41,16 +54,20 @@ export function SiteFooter() {
             <p className="mt-4 text-sm text-muted-foreground">
               The AI workspace that turns rejections into offers. Built for ambitious job seekers.
             </p>
-            <div className="mt-5 flex gap-2 text-muted-foreground">
-              <a href="#" className="rounded-lg p-2 hover:bg-accent hover:text-foreground" aria-label="Twitter">
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a href="#" className="rounded-lg p-2 hover:bg-accent hover:text-foreground" aria-label="GitHub">
-                <Github className="h-4 w-4" />
-              </a>
-              <a href="#" className="rounded-lg p-2 hover:bg-accent hover:text-foreground" aria-label="LinkedIn">
-                <Linkedin className="h-4 w-4" />
-              </a>
+            <div className="mt-5 flex flex-wrap gap-2 text-muted-foreground">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.label}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-sm transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground"
+                >
+                  <social.icon className="h-4 w-4" />
+                  <span>{social.label}</span>
+                </a>
+              ))}
             </div>
           </div>
 
@@ -58,13 +75,13 @@ export function SiteFooter() {
             <div key={col.title}>
               <h4 className="text-sm font-semibold text-foreground">{col.title}</h4>
               <ul className="mt-4 space-y-3">
-                {col.links.map((l) => (
-                  <li key={l.label}>
+                {col.links.map((link) => (
+                  <li key={link.label}>
                     <Link
-                      to={l.to}
+                      to={link.to}
                       className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {l.label}
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -74,7 +91,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-8 text-sm text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} ApplySmart AI. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} ApplySmart AI &middot; Built by Harish Prajapat</p>
           <p>Made with care for job seekers worldwide.</p>
         </div>
       </div>
