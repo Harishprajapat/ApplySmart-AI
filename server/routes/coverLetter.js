@@ -14,7 +14,6 @@ import {
   syncUsage,
 } from "../utils/usageService.js";
 
-
 const router = express.Router();
 
 function isRetryableGeminiError(error) {
@@ -53,44 +52,43 @@ async function rollbackReservedUsage(req) {
     try {
       await req.releaseUsageReservation();
     } catch (rollbackError) {
-      console.error("Failed to rollback reserved cover letter usage", rollbackError);
+      console.error(
+        "Failed to rollback reserved cover letter usage",
+        rollbackError,
+      );
     }
   }
 }
 
-router.post(
-  "/generate",
-  protect,
-  checkCoverLimit,
-  async (req, res) => {
-    let shouldRollbackUsage = true;
+router.post("/generate", protect, checkCoverLimit, async (req, res) => {
+  let shouldRollbackUsage = true;
 
-    try {
-      const { resume, jd } = req.body;
+  try {
+    const { resume, jd } = req.body;
 
-      if (
-        typeof resume !== "string" ||
-        typeof jd !== "string" ||
-        !resume.trim() ||
-        !jd.trim()
-      ) {
-        await rollbackReservedUsage(req);
-        shouldRollbackUsage = false;
-        return res.status(400).json({
-          error: "Resume and job description are required",
-        });
-      }
+    if (
+      typeof resume !== "string" ||
+      typeof jd !== "string" ||
+      !resume.trim() ||
+      !jd.trim()
+    ) {
+      await rollbackReservedUsage(req);
+      shouldRollbackUsage = false;
+      return res.status(400).json({
+        error: "Resume and job description are required",
+      });
+    }
 
-      const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      if (!apiKey) {
-        await rollbackReservedUsage(req);
-        shouldRollbackUsage = false;
-        return res.status(500).json({
-          error: "Missing Gemini API key. Set GEMINI_API_KEY in server/.env.",
-        });
-      }
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      await rollbackReservedUsage(req);
+      shouldRollbackUsage = false;
+      return res.status(500).json({
+        error: "Missing Gemini API key. Set GEMINI_API_KEY in server/.env.",
+      });
+    }
 
-      const prompt = `
+    const prompt = `
 You are an expert career coach who writes cover letters that get interviews.
 
 Write a cover letter using the resume and job description below.
@@ -131,66 +129,65 @@ Return only the cover letter text. No explanation, no preamble.
 
 `;
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const coverLetter = await generateWithRetry(model, prompt);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const coverLetter = await generateWithRetry(model, prompt);
 
-      if (!coverLetter) {
-        await rollbackReservedUsage(req);
-        shouldRollbackUsage = false;
-        return res.status(502).json({
-          error: "Empty AI response. Please try again.",
-        });
-      }
-
-      const savedCoverLetter = await CoverLetter.create({
-        user: req.user,
-        resume: resume.trim(),
-        jd: jd.trim(),
-        content: coverLetter,
-      });
-
-      try {
-        await createAIHistoryEntry(
-          createCoverLetterHistoryPayload({
-            userId: req.user,
-            content: coverLetter,
-          }),
-        );
-      } catch (historyError) {
-        console.error("Failed to record cover letter AI history", historyError);
-      }
-
+    if (!coverLetter) {
+      await rollbackReservedUsage(req);
       shouldRollbackUsage = false;
-      const usage = buildUsagePayload(
-        req.usageUser,
-        USAGE_FIELDS.coverLetter,
-        USAGE_LIMITS.coverLetter,
-      );
-
-      res.json({
-        coverLetter: savedCoverLetter.content,
-        id: savedCoverLetter._id,
-        usage,
+      return res.status(502).json({
+        error: "Empty AI response. Please try again.",
       });
-    } catch (error) {
-      if (shouldRollbackUsage) {
-        await rollbackReservedUsage(req);
-      }
-
-      console.error("Cover letter generation failed", error);
-
-      if (isRetryableGeminiError(error)) {
-        return res.status(503).json({
-          error:
-            "Gemini is temporarily unavailable. Please try again in a moment.",
-        });
-      }
-
-      res.status(500).json({ error: "Failed to generate cover letter" });
     }
-  },
-);
+
+    const savedCoverLetter = await CoverLetter.create({
+      user: req.user,
+      resume: resume.trim(),
+      jd: jd.trim(),
+      content: coverLetter,
+    });
+
+    try {
+      await createAIHistoryEntry(
+        createCoverLetterHistoryPayload({
+          userId: req.user,
+          content: coverLetter,
+        }),
+      );
+    } catch (historyError) {
+      console.error("Failed to record cover letter AI history", historyError);
+    }
+
+    shouldRollbackUsage = false;
+    const usage = buildUsagePayload(
+      req.usageUser,
+      USAGE_FIELDS.coverLetter,
+      USAGE_LIMITS.coverLetter,
+    );
+
+    res.json({
+      coverLetter: savedCoverLetter.content,
+      id: savedCoverLetter._id,
+      usage,
+    });
+  } catch (error) {
+    if (shouldRollbackUsage) {
+      await rollbackReservedUsage(req);
+    }
+
+    console.error("Cover letter generation failed", error);
+
+    if (isRetryableGeminiError(error)) {
+      return res.status(503).json({
+        error:
+          "Our AI service is experiencing high demand right now. Please try again in a moment.",
+      });
+    }
+
+    res.status(500).json({ error: "Failed to generate cover letter" });
+  }
+});
 
 router.get("/usage", protect, async (req, res) => {
   try {
@@ -199,7 +196,13 @@ router.get("/usage", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(buildUsagePayload(user, USAGE_FIELDS.coverLetter, USAGE_LIMITS.coverLetter));
+    res.json(
+      buildUsagePayload(
+        user,
+        USAGE_FIELDS.coverLetter,
+        USAGE_LIMITS.coverLetter,
+      ),
+    );
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch usage" });
   }
