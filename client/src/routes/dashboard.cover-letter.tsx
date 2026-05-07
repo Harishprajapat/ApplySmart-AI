@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Copy,
   Download,
@@ -8,6 +8,10 @@ import {
   Loader2,
   Sparkles,
   Wand2,
+  CheckCircle2,
+  Eye,
+  RefreshCcw,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -57,14 +61,18 @@ async function getJsPdf() {
 }
 
 function CoverLetterPage() {
-  const [resume, setResume] = useState("");
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [parsedResumeText, setParsedResumeText] = useState("");
   const [jd, setJd] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [parsingResume, setParsingResume] = useState(false);
   const [copying, setCopying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -86,17 +94,36 @@ function CoverLetterPage() {
     fetchUsage();
   }, []);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  useEffect(() => {
+    if (!resumeFile) {
+      setResumePreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(resumeFile);
+    setResumePreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [resumeFile]);
+
+  const handleResumeFileSelection = async (file: File | null) => {
     if (!file) return;
 
     if (file.type !== "application/pdf") {
       toast.error("Please upload a PDF file.");
-      event.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
     const reader = new FileReader();
+    setParsingResume(true);
+    setResumeFile(file);
+    setParsedResumeText("");
+    setCoverLetter("");
 
     reader.onload = async () => {
       try {
@@ -113,21 +140,41 @@ function CoverLetterPage() {
           fullText += `${strings.join(" ")}\n`;
         }
 
-        setResume(fullText.trim());
+        setParsedResumeText(fullText.trim());
         toast.success("Resume PDF uploaded successfully.");
       } catch {
+        setResumeFile(null);
+        setParsedResumeText("");
         toast.error("Could not read this PDF. Please try another file.");
       } finally {
-        event.target.value = "";
+        setParsingResume(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
+    };
+
+    reader.onerror = () => {
+      setResumeFile(null);
+      setParsedResumeText("");
+      setParsingResume(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      toast.error("Could not read this PDF. Please try another file.");
     };
 
     reader.readAsArrayBuffer(file);
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    await handleResumeFileSelection(file);
+  };
+
   const handleGenerate = async () => {
-    if (!resume.trim() || !jd.trim()) {
-      toast.error("Please add both your resume and the job description.");
+    if (!parsedResumeText.trim() || !jd.trim()) {
+      toast.error("Please upload your resume PDF and add the job description.");
       return;
     }
 
@@ -148,7 +195,7 @@ function CoverLetterPage() {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({ resume, jd }),
+        body: JSON.stringify({ resume: parsedResumeText, jd }),
       });
 
       const data = await response.json().catch(() => null);
@@ -189,6 +236,29 @@ function CoverLetterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemoveResume = () => {
+    setResumeFile(null);
+    setParsedResumeText("");
+    setParsingResume(false);
+    setCoverLetter("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleReplaceResume = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePreviewResume = () => {
+    if (!resumePreviewUrl) {
+      toast.error("Preview is not available for this file yet.");
+      return;
+    }
+
+    window.open(resumePreviewUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleCopy = async () => {
@@ -297,30 +367,75 @@ function CoverLetterPage() {
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
             <Label className="text-sm font-semibold">Your resume</Label>
             <p className="mt-1 text-xs text-muted-foreground">
-              Paste the latest version of your resume or upload a PDF.
+              Upload a PDF and we will extract the content in the background for generation.
             </p>
-            <Textarea
-              value={resume}
-              onChange={(event) => setResume(event.target.value)}
-              placeholder="Paste your resume here..."
-              className="mt-3 min-h-72 resize-none"
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={handleFileUpload}
             />
-            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>{resume.length} characters</span>
-              <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-primary hover:underline">
-                <FileUp className="h-3.5 w-3.5" />
-                Upload PDF instead
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Supports PDF resumes with automatic text extraction.
-            </p>
+
+            {!resumeFile ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-4 flex min-h-72 w-full flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 bg-muted/20 px-6 text-center transition-all hover:border-primary/40 hover:bg-primary/5"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground shadow-soft">
+                  <FileUp className="h-6 w-6" />
+                </div>
+                <div className="mt-5 text-base font-semibold">Upload your resume PDF</div>
+                <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                  Choose a PDF and we will keep the extracted text hidden while the cover letter stays grounded in your resume.
+                </p>
+                <span className="mt-5 inline-flex items-center rounded-full border border-border/60 bg-background px-3 py-1 text-xs text-muted-foreground">
+                  PDF only
+                </span>
+              </button>
+            ) : (
+              <div className="mt-4 rounded-3xl border border-border/70 bg-muted/20 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      {parsingResume ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">{resumeFile.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {formatFileSize(resumeFile.size)}
+                      </div>
+                      <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-medium text-success">
+                        {parsingResume ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        {parsingResume ? "Extracting text..." : "Uploaded successfully"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePreviewResume}
+                      disabled={!resumePreviewUrl}
+                    >
+                      <Eye />
+                      Preview PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleReplaceResume}>
+                      <RefreshCcw />
+                      Replace file
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleRemoveResume}>
+                      <Trash2 />
+                      Remove file
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
@@ -342,12 +457,17 @@ function CoverLetterPage() {
             size="xl"
             className="w-full"
             onClick={handleGenerate}
-            disabled={loading || Boolean(usage?.blocked)}
+            disabled={loading || parsingResume || Boolean(usage?.blocked)}
           >
             {loading ? (
               <>
                 <Loader2 className="animate-spin" />
                 Generating...
+              </>
+            ) : parsingResume ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Preparing resume...
               </>
             ) : (
               <>
@@ -431,4 +551,16 @@ function CoverLetterSkeleton() {
       ))}
     </div>
   );
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
