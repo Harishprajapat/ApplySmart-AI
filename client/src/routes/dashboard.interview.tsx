@@ -6,8 +6,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/interview")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Interview Prep",
+      description:
+        "Practice common interview questions with AI-guided answers and sharpen your interview readiness.",
+    }),
+  }),
   component: InterviewPrep,
 });
 

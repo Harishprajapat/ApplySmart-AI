@@ -21,8 +21,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/jobs")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Job Tracker",
+      description:
+        "Track applications, interviews, offers, and rejections from a single organized ApplySmart AI board.",
+    }),
+  }),
   component: JobTracker,
 });
 

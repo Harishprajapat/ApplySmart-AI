@@ -7,11 +7,11 @@ import appCss from "../styles.css?url";
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background bg-gradient-hero px-4">
-      <div className="max-w-md text-center animate-fade-in-up">
+      <div className="max-w-md animate-fade-in-up text-center">
         <h1 className="text-8xl font-bold text-gradient">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
         <div className="mt-6">
           <Link
@@ -31,14 +31,15 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ApplySmart AI — Get Shortlisted Faster with AI" },
+      { title: "ApplySmart AI - Get Shortlisted Faster with AI" },
       {
         name: "description",
         content:
-          "ApplySmart AI helps job seekers beat ATS, generate tailored cover letters, ace interviews, and track applications — all in one premium AI workspace.",
+          "ApplySmart AI helps job seekers beat ATS, generate tailored cover letters, ace interviews, and track applications in one premium AI workspace.",
       },
       { name: "author", content: "ApplySmart AI" },
-      { property: "og:title", content: "ApplySmart AI — Get Shortlisted Faster with AI" },
+      { name: "theme-color", content: "#7455ff" },
+      { property: "og:title", content: "ApplySmart AI - Get Shortlisted Faster with AI" },
       {
         property: "og:description",
         content:
@@ -50,6 +51,8 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "shortcut icon", href: "/favicon.svg" },
+      { rel: "apple-touch-icon", href: "/favicon.svg" },
     ],
   }),
   shellComponent: RootShell,

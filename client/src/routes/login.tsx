@@ -5,8 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { toast } from "sonner";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Log In",
+      description:
+        "Sign in to ApplySmart AI to access resume analysis, cover letter generation, interview prep, and your AI history.",
+    }),
+  }),
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
