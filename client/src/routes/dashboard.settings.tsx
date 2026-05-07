@@ -6,8 +6,16 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/settings")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Settings",
+      description:
+        "Manage your ApplySmart AI profile, preferences, privacy controls, and billing settings.",
+    }),
+  }),
   component: SettingsPage,
 });
 

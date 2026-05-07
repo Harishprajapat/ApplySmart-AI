@@ -32,8 +32,16 @@ import {
   getAIHistoryPreview,
   getAIHistoryTypeLabel,
 } from "@/lib/ai-history";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/history")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "AI History",
+      description:
+        "Review every resume analysis and cover letter generation from one unified ApplySmart AI history timeline.",
+    }),
+  }),
   component: HistoryPage,
 });
 
@@ -255,7 +263,7 @@ function HistoryPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | AIHistoryType)}>
-        <TabsList className="h-auto flex-wrap gap-2 rounded-2xl bg-muted/60 p-2">
+        <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-2xl bg-muted/60 p-2 sm:grid-cols-3">
           <TabsTrigger value="all" className="rounded-xl px-4 py-2">
             All
           </TabsTrigger>
@@ -311,7 +319,7 @@ function HistoryPage() {
         <div className="space-y-4">
           {filteredItems.map((item) => (
             <div key={item._id} className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(item.createdAt).toLocaleString()}
@@ -374,8 +382,8 @@ function HistoryPage() {
                 )}
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedItem(item)}>
+              <div className="mt-5 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => setSelectedItem(item)} className="w-full sm:w-auto">
                   <Eye />
                   View Details
                 </Button>
@@ -384,6 +392,7 @@ function HistoryPage() {
                   size="sm"
                   onClick={() => handleCopy(item)}
                   disabled={copyingId === item._id}
+                  className="w-full sm:w-auto"
                 >
                   <Copy />
                   {copyingId === item._id ? "Copying..." : "Copy"}
@@ -393,6 +402,7 @@ function HistoryPage() {
                   size="sm"
                   onClick={() => handleDownloadPdf(item)}
                   disabled={downloadingId === item._id}
+                  className="w-full sm:w-auto"
                 >
                   <Download />
                   {downloadingId === item._id ? "Preparing..." : "Download PDF"}

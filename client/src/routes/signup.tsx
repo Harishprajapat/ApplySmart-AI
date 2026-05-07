@@ -6,8 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { toast } from "sonner";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/signup")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Sign Up",
+      description:
+        "Create your ApplySmart AI account to start optimizing resumes, generating cover letters, and tracking your job search.",
+    }),
+  }),
   component: SignupPage,
 });
 

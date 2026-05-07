@@ -26,8 +26,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/resume")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Resume Analyzer",
+      description:
+        "Upload your resume PDF, compare it to a job description, and get ATS scoring plus AI-powered rewrite suggestions.",
+    }),
+  }),
   component: ResumeAnalyzer,
 });
 
@@ -608,6 +616,7 @@ function ResumeAnalyzer() {
         <Button
           variant="hero"
           size="xl"
+          className="w-full sm:w-auto"
           onClick={handleAnalyze}
           disabled={loading || parsingResume || Boolean(usage?.blocked)}
         >
@@ -806,7 +815,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
         </div>
 
         <Tabs defaultValue="resume" className="mt-5">
-          <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-muted/50 p-1">
+          <TabsList className="grid h-auto w-full grid-cols-1 rounded-2xl bg-muted/50 p-1 sm:grid-cols-3">
             <TabsTrigger value="resume" className="h-11 rounded-xl">
               <FileText />
               Resume
@@ -837,7 +846,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
 
           <TabsContent value="suggestions" className="mt-4">
             <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">AI Suggestions</h3>
                   <p className="mt-1 text-sm text-muted-foreground">

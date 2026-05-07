@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Bell,
   Search,
-  Clock
+  Clock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useCurrentUser } from "@/hooks/use-current-user";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +31,16 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Dashboard | ApplySmart AI" },
+      {
+        name: "description",
+        content:
+          "Open your ApplySmart AI workspace to manage resume analysis, cover letters, interview prep, history, and job tracking.",
+      },
+    ],
+  }),
   beforeLoad: ({ location }) => {
     if (typeof window === "undefined") return;
 
@@ -57,7 +66,7 @@ const navItems = [
   { to: "/dashboard/interview", label: "Interview Prep", icon: MessageSquareQuote, exact: false },
   { to: "/dashboard/jobs", label: "Job Tracker", icon: KanbanSquare, exact: false },
   { to: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
-  { to: "/dashboard/history", label: "History", icon: Clock, exact: false }
+  { to: "/dashboard/history", label: "History", icon: Clock, exact: false },
 ] as const;
 
 function DashboardLayout() {
@@ -74,12 +83,13 @@ function DashboardLayout() {
 
   const userName = user?.name?.trim() || "User";
   const userEmail = user?.email?.trim() || "";
-  const initials = userName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "U";
+  const initials =
+    userName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "U";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -103,23 +113,23 @@ function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 transform border-r border-sidebar-border bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col transform border-r border-sidebar-border bg-sidebar transition-transform duration-200 lg:static lg:w-64 lg:max-w-none lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center border-b border-sidebar-border px-5">
+        <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-5">
           <Logo />
         </div>
 
-        <nav className="space-y-1 p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => {
             const isActive = item.exact
               ? location.pathname === item.to
               : location.pathname.startsWith(item.to);
             const Icon = item.icon;
+
             return (
               <Link
                 key={item.to}
@@ -139,7 +149,7 @@ function DashboardLayout() {
           })}
         </nav>
 
-        <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-sidebar-border bg-gradient-to-br from-primary/10 to-primary-glow/10 p-4">
+        <div className="mx-3 mb-3 mt-auto rounded-2xl border border-sidebar-border bg-gradient-to-br from-primary/10 to-primary-glow/10 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="h-4 w-4 text-primary" />
             {usage?.plan === "pro" ? "Pro plan" : "Free plan"}
@@ -157,21 +167,15 @@ function DashboardLayout() {
         </div>
       </aside>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
-      {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-xl sm:flex-nowrap sm:px-6 sm:py-0">
           <Button
             variant="ghost"
             size="icon"
             className="lg:hidden"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpen((value) => !value)}
             aria-label="Toggle navigation"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -179,9 +183,9 @@ function DashboardLayout() {
             </svg>
           </Button>
 
-          <div className="relative hidden max-w-md flex-1 sm:block">
+          <div className="relative order-3 w-full sm:order-none sm:block sm:max-w-md sm:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search applications, drafts, questions…" className="pl-9" />
+            <Input placeholder="Search applications, drafts, questions..." className="pl-9" />
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">

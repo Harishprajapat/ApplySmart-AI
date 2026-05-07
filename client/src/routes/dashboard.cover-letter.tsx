@@ -18,8 +18,16 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/cover-letter")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Cover Letter Generator",
+      description:
+        "Upload your resume PDF, add a job description, and generate a personalized cover letter grounded in your experience.",
+    }),
+  }),
   component: CoverLetterPage,
 });
 
@@ -493,8 +501,8 @@ function CoverLetterPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleCopy} disabled={copying || !coverLetter}>
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+              <Button onClick={handleCopy} disabled={copying || !coverLetter} className="w-full sm:w-auto">
                 <Copy />
                 {copying ? "Copying..." : "Copy"}
               </Button>
@@ -502,6 +510,7 @@ function CoverLetterPage() {
                 variant="outline"
                 onClick={handleDownloadPdf}
                 disabled={downloading || !coverLetter}
+                className="w-full sm:w-auto"
               >
                 <Download />
                 {downloading ? "Preparing PDF..." : "Download PDF"}

@@ -23,8 +23,16 @@ import {
   fetchAIHistory,
   getAIHistoryTypeLabel,
 } from "@/lib/ai-history";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/")({
+  head: () => ({
+    meta: buildPageMeta({
+      title: "Dashboard",
+      description:
+        "See recent AI activity, quick actions, and job search momentum from your ApplySmart AI dashboard.",
+    }),
+  }),
   component: DashboardHome,
 });
 
@@ -110,7 +118,7 @@ function DashboardHome() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <div
             key={s.label}
@@ -154,7 +162,7 @@ function DashboardHome() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Recent activity</h2>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/dashboard/history">View all</Link>
@@ -177,7 +185,10 @@ function DashboardHome() {
           ) : (
             <ul className="divide-y divide-border/60">
               {recentActivity.map((item) => (
-                <li key={item._id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                <li
+                  key={item._id}
+                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
                     <div className="text-sm font-medium">{item.title}</div>
                     <div className="text-xs text-muted-foreground">
