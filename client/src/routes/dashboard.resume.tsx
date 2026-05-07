@@ -53,6 +53,17 @@ interface AnalysisResult {
   };
 }
 
+interface AnalyzeResponseError {
+  code?: string;
+  error?: string;
+  message?: string;
+  retryAfter?: number;
+  limit?: number;
+  used?: number;
+}
+
+const MAX_ANALYZE_RETRIES = 2;
+
 let pdfjsLibPromise: Promise<any> | null = null;
 
 async function getPdfJs() {
@@ -109,8 +120,15 @@ function ResumeAnalyzer() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [resumePreviewUrl, setResumePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
+  const pendingPayloadRef = useRef<{ resume: string; jd: string } | null>(null);
+  const retryAttemptRef = useRef(0);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -146,29 +164,112 @@ function ResumeAnalyzer() {
     };
   }, [resumeFile]);
 
-  const handleAnalyze = async () => {
-    if (!parsedResumeText.trim() || !jd.trim()) {
-      toast.error("Please upload your resume PDF and add the job description.");
+  useEffect(() => {
+    if (retryCountdown === null) {
+      return undefined;
+    }
+
+    if (retryCountdown <= 0) {
+      retryTimeoutRef.current = window.setTimeout(() => {
+        retryTimeoutRef.current = null;
+        void retryAnalyzeNow();
+      }, 0);
+
+      return () => {
+        if (retryTimeoutRef.current !== null) {
+          window.clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
+      };
+    }
+
+    const intervalId = window.setInterval(() => {
+      setRetryCountdown((current) => {
+        if (current === null) {
+          return null;
+        }
+
+        return current <= 1 ? 0 : current - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [retryCountdown]);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current !== null) {
+        window.clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const clearRetryState = () => {
+    if (retryTimeoutRef.current !== null) {
+      window.clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
+    setRetryMessage(null);
+    setRetryCountdown(null);
+    setRetryAttempt(0);
+    retryAttemptRef.current = 0;
+    pendingPayloadRef.current = null;
+  };
+
+  const performAnalyzeRequest = async (payload: { resume: string; jd: string }) => {
+    const res = await fetch("http://localhost:5000/api/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: localStorage.getItem("token") || "",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await res.json().catch(() => null)) as AnalyzeResponseError | AnalysisResult | null;
+
+    return { res, data };
+  };
+
+  const scheduleAnalyzeRetry = (payload: { resume: string; jd: string }, retryAfter: number) => {
+    pendingPayloadRef.current = payload;
+    retryAttemptRef.current += 1;
+    setRetryAttempt(retryAttemptRef.current);
+    setRetryCountdown(retryAfter);
+    setRetryMessage(`High demand right now - retrying in ${retryAfter} seconds...`);
+    setLoading(true);
+  };
+
+  const retryAnalyzeNow = async () => {
+    if (!pendingPayloadRef.current || isSubmittingRef.current) {
       return;
     }
 
+    setRetryCountdown(null);
+    setRetryMessage(null);
+    await submitAnalyzeRequest(pendingPayloadRef.current, { isRetry: true });
+  };
+
+  const submitAnalyzeRequest = async (
+    payload: { resume: string; jd: string },
+    options: { isRetry?: boolean } = {},
+  ) => {
+    if (isSubmittingRef.current) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setLoading(true);
-    setResult(null);
-    setLimitError(null);
 
     try {
-      const res = await fetch("http://localhost:5000/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: localStorage.getItem("token") || "",
-        },
-        body: JSON.stringify({ resume: parsedResumeText, jd }),
-      });
+      const { res, data } = await performAnalyzeRequest(payload);
 
-      const data = await res.json().catch(() => null);
       if (!res.ok) {
         if (res.status === 403 && data?.code === "PLAN_LIMIT_REACHED") {
+          clearRetryState();
           setLimitError(data?.message || "Free plan limit reached. Upgrade to Pro.");
           setUsage({
             plan: "free",
@@ -177,13 +278,34 @@ function ResumeAnalyzer() {
             remaining: 0,
             blocked: true,
           });
+          setLoading(false);
+          return;
         }
+
+        if (
+          res.status === 429 &&
+          data?.code === "AI_RATE_LIMIT" &&
+          typeof data?.retryAfter === "number" &&
+          retryAttemptRef.current < MAX_ANALYZE_RETRIES
+        ) {
+          scheduleAnalyzeRetry(payload, Math.max(1, data.retryAfter));
+          return;
+        }
+
+        clearRetryState();
+
+        if (res.status === 429 && data?.code === "AI_RATE_LIMIT") {
+          throw new Error("Still busy. Please try again later.");
+        }
+
         if (res.status >= 500 || data?.error === "AI error") {
           throw new Error("Server is busy right now. Please try again.");
         }
+
         throw new Error(data?.error || data?.message || "Error analyzing resume");
       }
 
+      clearRetryState();
       setResult(data);
       if (data?.usage) {
         setUsage({
@@ -191,13 +313,32 @@ function ResumeAnalyzer() {
           blocked: data.usage.plan === "free" && data.usage.remaining === 0,
         });
       }
-      toast.success("Analysis complete!");
+      toast.success(options.isRetry ? "Analysis complete after retry!" : "Analysis complete!");
     } catch (error) {
+      clearRetryState();
       const message = error instanceof Error ? error.message : "Error analyzing resume";
       toast.error(message);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
+  };
+
+  const handleAnalyze = async () => {
+    if (loading || parsingResume || isSubmittingRef.current) {
+      return;
+    }
+
+    if (!parsedResumeText.trim() || !jd.trim()) {
+      toast.error("Please upload your resume PDF and add the job description.");
+      return;
+    }
+
+    clearRetryState();
+    setResult(null);
+    setLimitError(null);
+
+    await submitAnalyzeRequest({ resume: parsedResumeText, jd });
   };
 
   const handleResumeFileSelection = async (file: File | null) => {
@@ -265,6 +406,7 @@ function ResumeAnalyzer() {
   };
 
   const handleRemoveResume = () => {
+    clearRetryState();
     setResumeFile(null);
     setParsedResumeText("");
     setParsingResume(false);
@@ -319,6 +461,24 @@ function ResumeAnalyzer() {
           <Button variant="hero" size="sm" className="mt-3" asChild>
             <Link to="/pricing">Upgrade to Pro</Link>
           </Button>
+        </div>
+      )}
+
+      {retryMessage && retryCountdown !== null && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium">
+                🚀 {retryMessage.replace(/\d+\sseconds?/, `${retryCountdown} second${retryCountdown === 1 ? "" : "s"}`)}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Retry {retryAttempt} of {MAX_ANALYZE_RETRIES} is queued automatically.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => void retryAnalyzeNow()}>
+              Retry now
+            </Button>
+          </div>
         </div>
       )}
 
@@ -419,7 +579,7 @@ function ResumeAnalyzer() {
         >
           {loading ? (
             <>
-              <Loader2 className="animate-spin" /> Analyzing...
+              <Loader2 className="animate-spin" /> {retryCountdown !== null ? "Waiting to retry..." : "Analyzing..."}
             </>
           ) : parsingResume ? (
             <>

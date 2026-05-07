@@ -15,6 +15,54 @@ import {
 } from "../utils/usageService.js";
 
 const router = express.Router();
+const AI_RATE_LIMIT_RETRY_AFTER_SECONDS = 60;
+
+function isRetryableGeminiError(error) {
+  const status = error?.status ?? error?.statusCode ?? error?.response?.status;
+  const message = typeof error?.message === "string" ? error.message : "";
+
+  return (
+    status === 429 ||
+    status === 503 ||
+    message.includes("429") ||
+    message.includes("503") ||
+    message.toLowerCase().includes("unavailable") ||
+    message.toLowerCase().includes("rate limit")
+  );
+}
+
+function parseRetryDelaySeconds(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = value.trim().match(/^(\d+(?:\.\d+)?)s$/i);
+  if (!match) {
+    return null;
+  }
+
+  return Math.ceil(Number.parseFloat(match[1]));
+}
+
+function extractGeminiRetryAfterSeconds(error) {
+  const errorDetails = Array.isArray(error?.errorDetails) ? error.errorDetails : [];
+
+  for (const detail of errorDetails) {
+    const retryDelay = parseRetryDelaySeconds(detail?.retryDelay);
+    if (retryDelay !== null) {
+      return Math.max(retryDelay, AI_RATE_LIMIT_RETRY_AFTER_SECONDS);
+    }
+  }
+
+  const message = typeof error?.message === "string" ? error.message : "";
+  const retryMatch = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+
+  if (retryMatch) {
+    return Math.max(Math.ceil(Number.parseFloat(retryMatch[1])), AI_RATE_LIMIT_RETRY_AFTER_SECONDS);
+  }
+
+  return AI_RATE_LIMIT_RETRY_AFTER_SECONDS;
+}
 
 function extractJsonObject(text) {
   const cleanText = text.replace(/```json|```/g, "").trim();
@@ -187,6 +235,16 @@ ${jd}
 
     if (shouldRollbackUsage) {
       await rollbackReservedUsage(req);
+    }
+
+    if (isRetryableGeminiError(err)) {
+      const retryAfter = extractGeminiRetryAfterSeconds(err);
+
+      return res.status(429).json({
+        code: "AI_RATE_LIMIT",
+        message: "High demand right now. Please retry after the cooldown window.",
+        retryAfter,
+      });
     }
 
     res.status(500).json({ error: "AI error" });
