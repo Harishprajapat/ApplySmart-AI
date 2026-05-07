@@ -64,6 +64,35 @@ interface AnalyzeResponseError {
 
 const MAX_ANALYZE_RETRIES = 2;
 
+function isAnalyzeResponseError(value: unknown): value is AnalyzeResponseError {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return (
+    "code" in value ||
+    "error" in value ||
+    "message" in value ||
+    "retryAfter" in value ||
+    "limit" in value ||
+    "used" in value
+  );
+}
+
+function isAnalysisResult(value: unknown): value is AnalysisResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return (
+    "score" in value &&
+    "matched" in value &&
+    "missing" in value &&
+    "suggestions" in value &&
+    "improved_resume" in value
+  );
+}
+
 let pdfjsLibPromise: Promise<any> | null = null;
 
 async function getPdfJs() {
@@ -266,15 +295,16 @@ function ResumeAnalyzer() {
 
     try {
       const { res, data } = await performAnalyzeRequest(payload);
+      const errorData = isAnalyzeResponseError(data) ? data : null;
 
       if (!res.ok) {
-        if (res.status === 403 && data?.code === "PLAN_LIMIT_REACHED") {
+        if (res.status === 403 && errorData?.code === "PLAN_LIMIT_REACHED") {
           clearRetryState();
-          setLimitError(data?.message || "Free plan limit reached. Upgrade to Pro.");
+          setLimitError(errorData?.message || "Free plan limit reached. Upgrade to Pro.");
           setUsage({
             plan: "free",
-            limit: data?.limit ?? 5,
-            used: data?.used ?? 5,
+            limit: errorData?.limit ?? 5,
+            used: errorData?.used ?? 5,
             remaining: 0,
             blocked: true,
           });
@@ -284,25 +314,29 @@ function ResumeAnalyzer() {
 
         if (
           res.status === 429 &&
-          data?.code === "AI_RATE_LIMIT" &&
-          typeof data?.retryAfter === "number" &&
+          errorData?.code === "AI_RATE_LIMIT" &&
+          typeof errorData?.retryAfter === "number" &&
           retryAttemptRef.current < MAX_ANALYZE_RETRIES
         ) {
-          scheduleAnalyzeRetry(payload, Math.max(1, data.retryAfter));
+          scheduleAnalyzeRetry(payload, Math.max(1, errorData.retryAfter));
           return;
         }
 
         clearRetryState();
 
-        if (res.status === 429 && data?.code === "AI_RATE_LIMIT") {
+        if (res.status === 429 && errorData?.code === "AI_RATE_LIMIT") {
           throw new Error("Still busy. Please try again later.");
         }
 
-        if (res.status >= 500 || data?.error === "AI error") {
+        if (res.status >= 500 || errorData?.error === "AI error") {
           throw new Error("Server is busy right now. Please try again.");
         }
 
-        throw new Error(data?.error || data?.message || "Error analyzing resume");
+        throw new Error(errorData?.error || errorData?.message || "Error analyzing resume");
+      }
+
+      if (!isAnalysisResult(data)) {
+        throw new Error("Invalid analysis response. Please try again.");
       }
 
       clearRetryState();
