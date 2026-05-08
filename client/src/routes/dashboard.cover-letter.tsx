@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { buildApiUrl } from "@/lib/api";
 import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/cover-letter")({
@@ -88,7 +89,7 @@ function CoverLetterPage() {
 
     const fetchUsage = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/cover-letter/usage", {
+        const response = await fetch(buildApiUrl("/api/cover-letter/usage"), {
           headers: { Authorization: token },
         });
         if (!response.ok) return;
@@ -197,7 +198,7 @@ function CoverLetterPage() {
     setLimitError(null);
 
     try {
-      const response = await fetch("http://localhost:5000/api/cover-letter/generate", {
+      const response = await fetch(buildApiUrl("/api/cover-letter/generate"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

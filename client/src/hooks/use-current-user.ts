@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { buildApiUrl } from "@/lib/api";
 
 export type CurrentUser = {
   _id: string;
@@ -19,7 +20,7 @@ export function useCurrentUser() {
 
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/me", {
+        const response = await fetch(buildApiUrl("/api/auth/me"), {
           headers: {
             Authorization: token,
           },

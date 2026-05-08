@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { buildApiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
@@ -97,7 +98,7 @@ function DashboardLayout() {
 
     const fetchUsage = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/analyze/usage", {
+        const response = await fetch(buildApiUrl("/api/analyze/usage"), {
           headers: { Authorization: token },
         });
         if (!response.ok) return;
