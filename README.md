@@ -224,7 +224,7 @@ Final-year Computer Engineering student passionate about:
 # 📬 Connect With Me
 
 📧 Email: harishprajapat.dev@gmail.com  
-💼 LinkedIn: https://www.linkedin.com/in/harish-prajapat/
+💼 LinkedIn: https://www.linkedin.com/in/harish-prajapat        
 🐙 GitHub: https://github.com/Harishprajapat
 
 ---
