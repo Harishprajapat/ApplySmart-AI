@@ -1,3 +1,5 @@
+import { buildApiUrl } from "@/lib/api";
+
 export type AIHistoryType = "resume" | "cover_letter";
 
 export type AIHistoryItem = {
@@ -48,7 +50,7 @@ export async function fetchAIHistory(token: string, options: FetchHistoryOptions
   }
 
   const query = params.toString();
-  const response = await fetch(`http://localhost:5000/api/history${query ? `?${query}` : ""}`, {
+  const response = await fetch(`${buildApiUrl("/api/history")}${query ? `?${query}` : ""}`, {
     headers: {
       Authorization: token,
     },

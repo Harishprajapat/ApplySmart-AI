@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
+import { buildApiUrl } from "@/lib/api";
 import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/resume")({
@@ -173,7 +174,7 @@ function ResumeAnalyzer() {
 
     const fetchUsage = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/analyze/usage", {
+        const response = await fetch(buildApiUrl("/api/analyze/usage"), {
           headers: { Authorization: token },
         });
         if (!response.ok) return;
@@ -257,7 +258,7 @@ function ResumeAnalyzer() {
   };
 
   const performAnalyzeRequest = async (payload: { resume: string; jd: string }) => {
-    const res = await fetch("http://localhost:5000/api/analyze", {
+    const res = await fetch(buildApiUrl("/api/analyze"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

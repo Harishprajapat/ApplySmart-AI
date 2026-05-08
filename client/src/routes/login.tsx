@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { toast } from "sonner";
+import { buildApiUrl } from "@/lib/api";
 import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/login")({
@@ -32,7 +33,7 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(buildApiUrl("/api/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
