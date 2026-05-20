@@ -375,9 +375,7 @@ function CoverLetterPage() {
         <div className="space-y-6">
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
             <Label className="text-sm font-semibold">Your resume</Label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Upload a PDF and we will extract the content in the background for generation.
-            </p>
+            
 
             <input
               ref={fileInputRef}
