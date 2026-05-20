@@ -32,7 +32,7 @@ import { buildPageMeta } from "@/lib/seo";
 export const Route = createFileRoute("/dashboard/resume")({
   head: () => ({
     meta: buildPageMeta({
-      title: "Resume Analyzer",
+      title: "ATS Resume Analysis",
       description:
         "Upload your resume PDF, compare it to a job description, and get ATS scoring plus AI-powered rewrite suggestions.",
     }),
@@ -475,9 +475,9 @@ function ResumeAnalyzer() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Resume Analyzer</h1>
+        <h1 className="text-3xl font-bold tracking-tight">ATS Resume Analysis</h1>
         <p className="mt-1.5 text-muted-foreground">
-          Upload your resume PDF and paste the job description. Get an ATS score and suggestions in seconds.
+          Upload your resume PDF, paste the job description, and find the signals recruiters might miss.
         </p>
       </div>
 
@@ -488,7 +488,7 @@ function ResumeAnalyzer() {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-muted-foreground">
-                Free plan: {usage.used}/{usage.limit ?? 5} analyses used this month.
+                Free plan: {usage.used}/{usage.limit ?? 5} ATS scans used this month.
               </p>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/pricing">Upgrade</Link>
@@ -549,9 +549,9 @@ function ResumeAnalyzer() {
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground shadow-soft">
                 <FileUp className="h-6 w-6" />
               </div>
-              <div className="mt-5 text-base font-semibold">Upload your resume PDF</div>
+              <div className="mt-5 text-base font-semibold">Upload the resume you are about to send</div>
               <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                Drag-and-drop is not required here. Just choose a PDF and we will keep the extracted text hidden while analysis runs.
+                Choose a PDF and ApplySmart will extract the content privately before checking role fit.
               </p>
               <span className="mt-5 inline-flex items-center rounded-full border border-border/60 bg-background px-3 py-1 text-xs text-muted-foreground">
                 PDF only
@@ -601,8 +601,8 @@ function ResumeAnalyzer() {
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-          <Label className="text-sm font-semibold">Job description</Label>
-          <p className="mt-1 text-xs text-muted-foreground">Paste the full JD for best results.</p>
+          <Label className="text-sm font-semibold">Target job description</Label>
+          <p className="mt-1 text-xs text-muted-foreground">Paste the full JD so feedback is grounded in the real role.</p>
           <Textarea
             value={jd}
             onChange={(e) => setJd(e.target.value)}
@@ -631,7 +631,7 @@ function ResumeAnalyzer() {
             </>
           ) : (
             <>
-              <Wand2 /> {usage?.blocked ? "Limit reached" : "Analyze now"}
+              <Wand2 /> {usage?.blocked ? "Limit reached" : "Get ATS Feedback"}
             </>
           )}
         </Button>
@@ -681,6 +681,27 @@ function ResultsSkeleton() {
   );
 }
 
+function getScoreInsight(score: number) {
+  if (score >= 85) {
+    return {
+      title: "Strong technical alignment",
+      desc: "Your resume is close to the role. Tighten the missing keywords and make the strongest impact bullets easier to spot.",
+    };
+  }
+
+  if (score >= 65) {
+    return {
+      title: "Good candidate, muted signal",
+      desc: "You likely have relevant experience, but recruiters may miss it unless the role language and proof points are sharper.",
+    };
+  }
+
+  return {
+    title: "Recruiters may miss the fit",
+    desc: "The resume currently undersells your match. Focus on missing skills, clearer structure, and role-specific wording before applying.",
+  };
+}
+
 function ResultsView({ result }: { result: AnalysisResult }) {
   const [visibleSuggestions, setVisibleSuggestions] = useState(3);
   const [copying, setCopying] = useState(false);
@@ -688,6 +709,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
 
   const displayedSuggestions = result.suggestions.slice(0, visibleSuggestions);
   const hasMoreSuggestions = result.suggestions.length > 3;
+  const scoreInsight = getScoreInsight(result.score);
 
   const handleCopy = async () => {
     if (!result.improved_resume) {
@@ -772,9 +794,9 @@ function ResultsView({ result }: { result: AnalysisResult }) {
               Improved Resume Ready
             </div>
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Use your optimized resume first</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">{scoreInsight.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                We kept the ATS score visible, but the rewritten resume is now the main output so it is instantly usable.
+                {scoreInsight.desc}
               </p>
             </div>
           </div>
@@ -783,7 +805,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                ATS Score
+                ATS Signal
               </div>
               <div className="mt-2 flex items-end gap-2">
                 <span className="text-3xl font-bold">{result.score}</span>
@@ -849,9 +871,9 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">AI Suggestions</h3>
+                  <h3 className="text-lg font-semibold">What to fix before applying</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    The most important improvements are surfaced first.
+                    The most important fixes are surfaced first, so you can improve the resume without rewriting everything.
                   </p>
                 </div>
                 <Badge variant="outline">{result.suggestions.length} items</Badge>
@@ -909,14 +931,14 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             <Accordion type="single" collapsible className="rounded-2xl border border-border/60 bg-card px-5 shadow-soft">
               <AccordionItem value="ats-analysis" className="border-b-0">
                 <AccordionTrigger className="py-5 text-base font-semibold hover:no-underline">
-                  Detailed ATS Analysis
+                  Recruiter + ATS Readout
                 </AccordionTrigger>
                 <AccordionContent className="pb-5">
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold">
                         <CheckCircle2 className="h-4 w-4 text-success" />
-                        Matched keywords
+                        Signals already working
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {result.matched.length ? (
@@ -938,7 +960,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
                     <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold">
                         <AlertCircle className="h-4 w-4 text-warning" />
-                        Missing skills
+                        Recruiters may miss these skills
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {result.missing.length ? (

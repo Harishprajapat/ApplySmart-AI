@@ -31,19 +31,19 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ApplySmart AI - Get Shortlisted Faster with AI" },
+      { title: "ApplySmart AI - Stop Sending Resumes Into a Black Hole" },
       {
         name: "description",
         content:
-          "ApplySmart AI helps job seekers beat ATS, generate tailored cover letters, ace interviews, and track applications in one premium AI workspace.",
+          "ApplySmart AI helps students, freshers, and job seekers beat ATS filters, improve resumes, generate tailored cover letters, and apply with clarity.",
       },
       { name: "author", content: "ApplySmart AI" },
-      { name: "theme-color", content: "#7455ff" },
-      { property: "og:title", content: "ApplySmart AI - Get Shortlisted Faster with AI" },
+      { name: "theme-color", content: "#171b22" },
+      { property: "og:title", content: "ApplySmart AI - Stop Sending Resumes Into a Black Hole" },
       {
         property: "og:description",
         content:
-          "Stop getting rejected by bots. ApplySmart AI optimizes your resume, writes cover letters, and preps you for interviews in minutes.",
+          "Stop guessing why recruiters ignore you. ApplySmart AI checks ATS fit, finds missing skills, improves resumes, and writes job-ready cover letters.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -68,7 +68,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
