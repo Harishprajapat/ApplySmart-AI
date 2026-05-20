@@ -1,18 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
-  CheckCircle2,
   Clock3,
   FileSearch,
-  FileText,
   Gauge,
-  History,
-  Layers3,
   PenLine,
   SearchX,
-  ShieldCheck,
   Sparkles,
-  Target,
   UploadCloud,
   Zap,
 } from "lucide-react";
@@ -41,49 +35,28 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-const proof = [
-  "Built for freshers",
-  "PDF upload ready",
-  "ATS-focused feedback",
-  "Gemini AI powered",
-  "Private workspace",
-];
+const proof = ["Built for rejection", "PDF upload", "ATS feedback", "Private workspace"];
 
 const features = [
   {
     icon: Gauge,
     title: "ATS Resume Analysis",
-    desc: "See how your resume actually maps to the role before it disappears into the filter.",
+    desc: "See how the filter reads you before a recruiter does.",
   },
   {
-    icon: Sparkles,
-    title: "AI Resume Improvements",
-    desc: "Turn vague bullets into sharper proof of skill, impact, and role fit.",
+    icon: SearchX,
+    title: "Missing Skill Detection",
+    desc: "Find the keywords and experience signals the JD expects.",
   },
   {
     icon: PenLine,
+    title: "Resume Rewrite Help",
+    desc: "Turn weak bullets into proof people can skim fast.",
+  },
+  {
+    icon: Sparkles,
     title: "Job-Ready Cover Letters",
-    desc: "Generate tailored letters grounded in your resume and the exact job description.",
-  },
-  {
-    icon: History,
-    title: "Your AI Workspace",
-    desc: "Resume scans, cover letters, and past outputs stay organized in one place.",
-  },
-  {
-    icon: FileText,
-    title: "PDF Upload & Parsing",
-    desc: "Upload your resume as a PDF and let ApplySmart extract the important context.",
-  },
-  {
-    icon: Target,
-    title: "Skill Gap Detection",
-    desc: "Find the missing keywords and experience signals recruiters are likely scanning for.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Usage Tracking",
-    desc: "Know what you have used, what is left, and when it is time to upgrade.",
+    desc: "Write letters that sound tailored, not templated.",
   },
 ];
 
@@ -91,17 +64,17 @@ const steps = [
   {
     icon: UploadCloud,
     title: "Upload Resume",
-    desc: "Drop in your PDF and paste the job description you are targeting.",
+    desc: "Drop in the PDF and paste the job description.",
   },
   {
     icon: FileSearch,
     title: "AI Analyzes Fit",
-    desc: "ApplySmart checks ATS alignment, missing skills, weak structure, and resume clarity.",
+    desc: "ApplySmart spots gaps, weak structure, and missing proof.",
   },
   {
     icon: Zap,
     title: "Improve & Apply Smarter",
-    desc: "Use sharper feedback, rewritten sections, and cover letters built for the role.",
+    desc: "Fix the signal, then apply with more confidence.",
   },
 ];
 
@@ -126,27 +99,31 @@ function LandingPage() {
 function Hero() {
   return (
     <section className="relative isolate overflow-hidden">
-      <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_50%_0%,oklch(0.64_0.18_290/.12),transparent_28%),linear-gradient(180deg,oklch(0.045_0.01_285),oklch(0.055_0.01_285)_60%,oklch(0.04_0.01_285))]" />
+      <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_50%_0%,oklch(0.58_0.18_25/.10),transparent_30%),linear-gradient(180deg,oklch(0.04_0.01_285),oklch(0.045_0.01_285)_58%,oklch(0.035_0.01_285))]" />
       <div className="absolute inset-0 -z-10 bg-grid-fade opacity-45" />
-      <div className="absolute left-1/2 top-24 -z-10 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-[120px] animate-pulse-glow" />
+      <div className="absolute left-1/2 top-24 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[110px] animate-pulse-glow" />
 
-      <div className="container mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-8">
+      <div className="container mx-auto max-w-7xl px-4 pb-18 pt-20 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
         <div className="mx-auto max-w-5xl text-center">
           <div className="animate-fade-in inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground shadow-soft backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            For job seekers tired of being ignored
+            For job seekers tired of silence
           </div>
 
           <h1 className="animate-fade-in-up mt-7 text-balance text-5xl font-black tracking-[-0.07em] text-foreground sm:text-7xl lg:text-8xl">
-            Stop sending resumes into a black hole.
+            Stop sending resumes{" "}
+            <span className="black-hole-emphasis">
+              into a black hole
+              <span aria-hidden="true" className="black-hole-emphasis-bar" />
+            </span>
+            .
           </h1>
 
           <p
             className="animate-fade-in-up mx-auto mt-7 max-w-3xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl"
             style={{ animationDelay: "0.08s" }}
           >
-            ApplySmart AI checks ATS alignment, exposes missing skills, improves weak resume
-            sections, and writes cover letters that sound like you actually want the job.
+            See why ATS filters you out, what is missing, and what to fix before the next apply.
           </p>
 
           <div
@@ -154,9 +131,7 @@ function Hero() {
             style={{ animationDelay: "0.16s" }}
           >
             <Button variant="hero" size="xl" asChild>
-              <Link to="/dashboard/resume">
-                Analyze Resume <ArrowRight />
-              </Link>
+              <Link to="/dashboard/resume">Analyze Resume <ArrowRight /></Link>
             </Button> 
             <Button variant="outline" size="xl" asChild>
               <Link to="/dashboard">Try Demo</Link>
@@ -165,9 +140,9 @@ function Hero() {
 
           <div className="animate-fade-in-up mt-10 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
             {[
-              ["ATS clarity", "Know why your resume gets filtered."],
-              ["Skill gaps", "Spot what the JD is quietly asking for."],
-              ["Cover letters", "Generate role-specific drafts fast."],
+              ["ATS clarity", "Know why the filter says no."],
+              ["Skill gaps", "See what the job description wants."],
+              ["Fast fixes", "Rewrite weak bullets in minutes."],
             ].map(([title, desc]) => (
               <div
                 key={title}
@@ -190,8 +165,7 @@ function Trust() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <p className="max-w-md text-sm font-medium text-muted-foreground">
-            Not a generic ATS checker. A focused AI workspace for students, freshers, and builders
-            trying to get seen.
+            Not another ATS checker. A focused AI workspace for people tired of being filtered out.
           </p>
           <div className="flex flex-wrap gap-2">
             {proof.map((item) => (
@@ -218,19 +192,18 @@ function Features() {
             Product arsenal
           </Badge>
           <h2 className="mt-5 text-balance text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-            Everything your application needed before you clicked submit.
+            Fix what recruiters silently reject.
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-            ApplySmart turns resume anxiety into a clear checklist: what matches, what is missing,
-            what undersells you, and what to fix next.
+            Short feedback. Less fluff. More signal.
           </p>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
           {features.map((feature, index) => (
             <article
               key={feature.title}
-            className="group relative overflow-hidden rounded-3xl border border-white/10 bg-card/80 p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-elegant"
+              className="group relative overflow-hidden rounded-3xl border border-white/10 bg-card/80 p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-elegant"
               style={{ animationDelay: `${index * 0.04}s` }}
             >
               <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-primary/0 blur-3xl transition-colors duration-500 group-hover:bg-primary/10" />
@@ -258,7 +231,7 @@ function HowItWorks() {
             How it works
           </Badge>
           <h2 className="mt-5 text-balance text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-            Three steps from guessing to knowing.
+            Three steps from guesswork to clarity.
           </h2>
         </div>
 
@@ -289,19 +262,18 @@ function ProductPreview() {
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <Badge variant="outline" className="border-primary/20 bg-white/[0.03] text-primary">
-              Product preview
+              Before / after
             </Badge>
             <h2 className="mt-5 text-balance text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-              Feels less like a checker. More like a command center.
+              Same profile. Sharper signal.
             </h2>
             <p className="mt-5 text-lg leading-8 text-muted-foreground">
-              Score the resume, inspect missing skills, generate a cover letter, and keep every AI
-              output in your workspace.
+              Clear proof beats vague confidence. This is what changes the read.
             </p>
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-6 rounded-[2rem] bg-primary/10 blur-3xl" />
+            <div className="absolute -inset-6 rounded-[2rem] bg-primary/5 blur-3xl" />
             <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-elegant">
               <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-5 py-4">
                 <div className="flex gap-2">
@@ -310,32 +282,64 @@ function ProductPreview() {
                   <span className="h-3 w-3 rounded-full bg-primary/60" />
                 </div>
                 <span className="rounded-full bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-                  applysmart.ai/workspace
+                  applysmart.ai/transform
                 </span>
               </div>
 
-              <div className="grid gap-4 p-5 sm:grid-cols-5">
-                <div className="rounded-3xl border border-white/10 bg-background/60 p-5 sm:col-span-2">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    ATS score
+              <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto_1fr]">
+                <div className="rounded-3xl border border-white/10 bg-background/60 p-5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+                    Before
                   </div>
                   <div className="mt-4 flex items-end gap-2">
-                    <span className="text-6xl font-black tracking-[-0.08em] text-gradient">86</span>
+                    <span className="text-6xl font-black tracking-[-0.08em] text-foreground">42</span>
+                    <span className="pb-2 text-muted-foreground">/100</span>
+                  </div>
+                  <div className="mt-5 h-2 rounded-full bg-muted">
+                    <div className="h-full w-[42%] rounded-full bg-primary/55" />
+                  </div>
+                  <div className="mt-5 space-y-3 text-sm text-muted-foreground">
+                    <ComparisonLine label="Headline" value="Generic profile summary" />
+                    <ComparisonLine label="Bullets" value="Tasks without proof" />
+                    <ComparisonLine label="Signal" value="Missing keywords and impact" />
+                  </div>
+                </div>
+
+                <div className="hidden items-center justify-center lg:flex">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                    <ArrowRight className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-background/60 p-5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+                    After
+                  </div>
+                  <div className="mt-4 flex items-end gap-2">
+                    <span className="text-6xl font-black tracking-[-0.08em] text-foreground">86</span>
                     <span className="pb-2 text-muted-foreground">/100</span>
                   </div>
                   <div className="mt-5 h-2 rounded-full bg-muted">
                     <div className="h-full w-[86%] rounded-full bg-primary" />
                   </div>
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Strong technical alignment. Your backend impact still needs louder numbers.
-                  </p>
+                  <div className="mt-5 space-y-3 text-sm text-muted-foreground">
+                    <ComparisonLine label="Headline" value="Role-specific and clear" />
+                    <ComparisonLine label="Bullets" value="Impact with numbers" />
+                    <ComparisonLine label="Signal" value="Keywords and outcomes aligned" />
+                  </div>
                 </div>
+              </div>
 
-                <div className="space-y-4 sm:col-span-3">
-                  <PreviewCard title="Recruiters may miss" items={["PostgreSQL", "CI/CD", "System design"]} tone="warn" />
-                  <PreviewCard title="Cover letter angle" items={["Mention internship ownership", "Tie projects to role outcomes"]} />
-                  <PreviewCard title="History tracking" items={["Resume scan saved", "Cover letter draft ready"]} />
-                </div>
+              <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
+                {[
+                  "No filler language.",
+                  "Proof is surfaced first.",
+                  "The role reads obvious.",
+                ].map((item) => (
+                  <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
+                    {item}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -345,32 +349,18 @@ function ProductPreview() {
   );
 }
 
-function PreviewCard({
-  title,
-  items,
-  tone = "default",
-}: {
-  title: string;
-  items: string[];
-  tone?: "default" | "warn";
-}) {
+
+
+
+function ComparisonLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        {tone === "warn" ? (
-          <SearchX className="h-4 w-4 text-primary" />
-        ) : (
-          <CheckCircle2 className="h-4 w-4 text-primary" />
-        )}
-        {title}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {items.map((item) => (
-          <span key={item} className="rounded-full bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-            {item}
-          </span>
-        ))}
-      </div>
+    <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="max-w-[14rem] text-right text-sm font-medium leading-6 text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
@@ -378,24 +368,27 @@ function PreviewCard({
 function RejectionSection() {
   return (
     <section id="why" className="relative overflow-hidden border-y border-white/10 bg-card/45 py-24 sm:py-32">
-      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/6 blur-3xl" />
       <div className="container relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-start">
           <div>
             <Badge variant="outline" className="border-primary/20 bg-white/[0.03] text-primary">
-              The uncomfortable part
+              Why you get filtered
             </Badge>
             <h2 className="mt-5 text-balance text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-              Why good candidates still get rejected.
+              Good candidates still get ignored.
             </h2>
           </div>
           <div className="space-y-4">
             {[
-              "ATS systems do not read potential. They scan structure, keywords, and obvious matches.",
-              "Strong projects get ignored when your resume hides the tools, metrics, and role language recruiters expect.",
-              "Most freshers are not underqualified. Their resume just makes the important parts too quiet.",
+              "ATS reads keywords first, potential second.",
+              "If your proof is buried, recruiters skim past it.",
+              "Weak structure looks like weak signal.",
             ].map((line) => (
-              <div key={line} className="rounded-3xl border border-white/10 bg-background/65 p-6 text-lg leading-8 text-muted-foreground shadow-soft">
+              <div
+                key={line}
+                className="rounded-3xl border border-white/10 bg-background/65 p-6 text-lg leading-8 text-muted-foreground shadow-soft"
+              >
                 {line}
               </div>
             ))}
@@ -411,16 +404,16 @@ function CTASection() {
     <section className="py-24">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-card p-8 text-center shadow-elegant sm:p-14">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.64_0.18_290/.12),transparent_42%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.58_0.18_25/.10),transparent_44%)]" />
           <div className="relative mx-auto max-w-3xl">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-primary">
               <Clock3 className="h-6 w-6" />
             </div>
             <h2 className="text-balance text-4xl font-black tracking-[-0.05em] text-foreground sm:text-6xl">
-              Your next application should not be another guess.
+              Your next application should not be a blind shot.
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Upload the resume, paste the job, and get feedback before the rejection email does.
+              Upload the resume, paste the job, and get the verdict before the rejection email does.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button variant="hero" size="xl" asChild>
