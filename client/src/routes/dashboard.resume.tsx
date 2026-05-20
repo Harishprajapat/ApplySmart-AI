@@ -512,7 +512,8 @@ function ResumeAnalyzer() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium">
-                🚀 {retryMessage.replace(/\d+\sseconds?/, `${retryCountdown} second${retryCountdown === 1 ? "" : "s"}`)}
+                Retrying in{" "}
+                {retryMessage.replace(/\d+\sseconds?/, `${retryCountdown} second${retryCountdown === 1 ? "" : "s"}`)}
               </p>
               <p className="mt-1 text-muted-foreground">
                 Retry {retryAttempt} of {MAX_ANALYZE_RETRIES} is queued automatically.
@@ -702,14 +703,94 @@ function getScoreInsight(score: number) {
   };
 }
 
+type SuggestionSeverity = "HIGH" | "MEDIUM" | "LOW";
+
+function compactText(value: string, maxLength: number) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+
+  return `${cleaned.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function getSuggestionSeverity(text: string): SuggestionSeverity {
+  const lower = text.toLowerCase();
+
+  if (
+    /missing|keyword|generic|weak|no numbers|lacks|undersell|quiet|unclear|vague|passive/.test(lower)
+  ) {
+    return "HIGH";
+  }
+
+  if (/summary|skills|experience|bullet|action verbs|impact|quantif|tailor/.test(lower)) {
+    return "MEDIUM";
+  }
+
+  return "LOW";
+}
+
+function getSuggestionTitle(text: string, severity: SuggestionSeverity) {
+  const lower = text.toLowerCase();
+
+  if (/number|quantif|metric|impact/.test(lower)) return "Missing proof of impact";
+  if (/generic|summary|vague|buzzword/.test(lower)) return "Sounds generic";
+  if (/keyword|skill|ats/.test(lower)) return "Missing keyword signal";
+  if (/verb|action/.test(lower)) return "Weak bullet language";
+  if (/frontend|technical|product/.test(lower)) return "Wrong emphasis";
+  if (/experience/.test(lower)) return "Experience needs sharper proof";
+  if (severity === "HIGH") return "Critical fix";
+  if (severity === "MEDIUM") return "Important fix";
+  return "Small cleanup";
+}
+
+function getSuggestionQuickFix(text: string) {
+  const lower = text.toLowerCase();
+
+  if (/number|quantif|metric|impact/.test(lower)) return "Add numbers or scale.";
+  if (/generic|summary|vague|buzzword/.test(lower)) return "Replace with proof.";
+  if (/keyword|skill|ats/.test(lower)) return "Mirror the JD more closely.";
+  if (/verb|action/.test(lower)) return "Use a stronger verb.";
+  if (/frontend|technical|product/.test(lower)) return "Show product impact.";
+  if (/experience/.test(lower)) return "Add one concrete example.";
+
+  return "Make it concrete.";
+}
+
+function summarizeSuggestion(text: string, index: number) {
+  const severity = getSuggestionSeverity(text);
+  const title = getSuggestionTitle(text, severity);
+  const summary =
+    severity === "HIGH"
+      ? compactText(text, 92)
+      : severity === "MEDIUM"
+        ? compactText(text, 86)
+        : compactText(text, 78);
+
+  return {
+    id: `${index}-${title}`,
+    severity,
+    title,
+    summary,
+    quickFix: getSuggestionQuickFix(text),
+  };
+}
+
 function ResultsView({ result }: { result: AnalysisResult }) {
   const [visibleSuggestions, setVisibleSuggestions] = useState(3);
   const [copying, setCopying] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const displayedSuggestions = result.suggestions.slice(0, visibleSuggestions);
+  const suggestionCards = result.suggestions.map((suggestion, index) =>
+    summarizeSuggestion(suggestion, index),
+  );
+  const displayedSuggestions = suggestionCards.slice(0, visibleSuggestions);
   const hasMoreSuggestions = result.suggestions.length > 3;
   const scoreInsight = getScoreInsight(result.score);
+  const verdict =
+    result.score >= 85 ? "Strong fit" : result.score >= 65 ? "Needs sharpening" : "High risk";
+  const criticalFixes = suggestionCards.filter((item) => item.severity === "HIGH").length;
+  const missingSkills = result.missing.slice(0, 4);
 
   const handleCopy = async () => {
     if (!result.improved_resume) {
@@ -789,53 +870,73 @@ function ResultsView({ result }: { result: AnalysisResult }) {
       <div className="rounded-[28px] border border-border/60 bg-card p-4 shadow-soft sm:p-6">
         <div className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              Improved Resume Ready
-            </div>
+            <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary">
+              Resume verdict
+            </Badge>
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">{scoreInsight.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {scoreInsight.desc}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{scoreInsight.desc}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                ATS Signal
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                ATS score
               </div>
-              <div className="mt-2 flex items-end gap-2">
-                <span className="text-3xl font-bold">{result.score}</span>
-                <span className="pb-1 text-sm text-muted-foreground">/ 100</span>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-background">
-                <div
-                  className="h-full rounded-full bg-gradient-primary transition-all duration-700"
-                  style={{ width: `${result.score}%` }}
-                />
-              </div>
+              <div className="mt-2 text-3xl font-bold">{result.score}</div>
             </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Verdict
+              </div>
+              <div className="mt-2 text-sm font-semibold text-foreground">{verdict}</div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Missing skills
+              </div>
+              <div className="mt-2 text-sm font-semibold text-foreground">{result.missing.length}</div>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Critical fixes
+              </div>
+              <div className="mt-2 text-sm font-semibold text-foreground">{criticalFixes}</div>
+            </div>
+          </div>
 
-            <div className="flex flex-col gap-2 sm:w-44">
-              <Button onClick={handleCopy} disabled={copying || !result.improved_resume} className="w-full">
-                <Copy />
-                {copying ? "Copying..." : "Copy to Clipboard"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleDownloadPdf}
-                disabled={downloading || !result.improved_resume}
-                className="w-full"
-              >
-                <Download />
-                {downloading ? "Preparing PDF..." : "Download as PDF"}
-              </Button>
-            </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button onClick={handleCopy} disabled={copying || !result.improved_resume} className="w-full sm:w-auto">
+              <Copy />
+              {copying ? "Copying..." : "Copy resume"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={downloading || !result.improved_resume}
+              className="w-full sm:w-auto"
+            >
+              <Download />
+              {downloading ? "Preparing PDF..." : "Download PDF"}
+            </Button>
           </div>
         </div>
+
+        {missingSkills.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Missing skills
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {missingSkills.map((skill) => (
+                <Badge key={skill} variant="outline" className="border-primary/20 bg-background/70 text-foreground">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Tabs defaultValue="resume" className="mt-5">
           <TabsList className="grid h-auto w-full grid-cols-1 rounded-2xl bg-muted/50 p-1 sm:grid-cols-3">
@@ -871,10 +972,8 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">What to fix before applying</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    The most important fixes are surfaced first, so you can improve the resume without rewriting everything.
-                  </p>
+                  <h3 className="text-lg font-semibold">Critical fixes</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Short, sharp, and easy to scan.</p>
                 </div>
                 <Badge variant="outline">{result.suggestions.length} items</Badge>
               </div>
@@ -882,15 +981,28 @@ function ResultsView({ result }: { result: AnalysisResult }) {
               {result.suggestions.length ? (
                 <>
                   <ul className="mt-4 space-y-3">
-                    {displayedSuggestions.map((s, i) => (
+                    {displayedSuggestions.map((item) => (
                       <li
-                        key={i}
-                        className="flex items-start gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4"
+                        key={item.id}
+                        className="group rounded-2xl border border-border/60 bg-muted/25 p-4 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/35"
                       >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-primary text-xs font-bold text-primary-foreground">
-                          {i + 1}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={
+                              item.severity === "HIGH"
+                                ? "border-primary/25 bg-primary/10 text-primary"
+                                : item.severity === "MEDIUM"
+                                  ? "border-border/70 bg-background/70 text-foreground"
+                                  : "border-border/70 bg-background/70 text-muted-foreground"
+                            }
+                          >
+                            {item.severity}
+                          </Badge>
+                          <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
                         </div>
-                        <span className="pt-0.5 text-sm leading-6">{s}</span>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.summary}</p>
+                        <p className="mt-3 text-sm font-medium text-primary">→ {item.quickFix}</p>
                       </li>
                     ))}
                   </ul>
@@ -921,7 +1033,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
                 </>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  No suggestions were returned for this analysis.
+                  No critical fixes were returned for this analysis.
                 </p>
               )}
             </div>

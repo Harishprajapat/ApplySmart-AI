@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ApplySmart AI - premium product identity.
- * Dark monochrome palette with a restrained violet accent, precise shadows, subtle glass.
+ * Dark monochrome palette with a restrained crimson accent, precise shadows, subtle glass.
  * All colors use oklch.
  */
 
@@ -61,8 +61,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   --shadow-soft: 0 1px 1px oklch(0 0 0 / 0.22), 0 18px 50px -34px oklch(0 0 0 / 0.78);
-  --shadow-elegant: 0 24px 80px -36px oklch(0.55 0.22 290 / 0.24), 0 10px 35px -22px oklch(0 0 0 / 0.72);
-  --shadow-glow: 0 0 64px oklch(0.55 0.22 290 / 0.22);
+  --shadow-elegant: 0 24px 80px -36px oklch(0.55 0.18 25 / 0.22), 0 10px 35px -22px oklch(0 0 0 / 0.72);
+  --shadow-glow: 0 0 44px oklch(0.55 0.18 25 / 0.14);
 }
 
 :root,
@@ -78,9 +78,9 @@
   --popover: oklch(0.095 0.012 285);
   --popover-foreground: oklch(0.94 0.006 285);
 
-  --primary: oklch(0.64 0.18 290);
+  --primary: oklch(0.58 0.18 25);
   --primary-foreground: oklch(0.98 0.003 285);
-  --primary-glow: oklch(0.7 0.18 290);
+  --primary-glow: oklch(0.66 0.18 25);
 
   --secondary: oklch(0.16 0.01 285);
   --secondary-foreground: oklch(0.92 0.004 285);
@@ -102,9 +102,9 @@
 
   --border: oklch(1 0 0 / 0.08);
   --input: oklch(1 0 0 / 0.1);
-  --ring: oklch(0.64 0.18 290);
+  --ring: oklch(0.58 0.18 25);
 
-  --chart-1: oklch(0.64 0.18 290);
+  --chart-1: oklch(0.58 0.18 25);
   --chart-2: oklch(0.54 0.03 285);
   --chart-3: oklch(0.72 0.02 285);
   --chart-4: oklch(0.82 0.01 285);
@@ -112,18 +112,18 @@
 
   --sidebar: oklch(0.065 0.01 285);
   --sidebar-foreground: oklch(0.92 0.004 285);
-  --sidebar-primary: oklch(0.64 0.18 290);
+  --sidebar-primary: oklch(0.58 0.18 25);
   --sidebar-primary-foreground: oklch(0.98 0.003 285);
   --sidebar-accent: oklch(0.12 0.01 285);
   --sidebar-accent-foreground: oklch(0.94 0.006 285);
   --sidebar-border: oklch(1 0 0 / 0.08);
-  --sidebar-ring: oklch(0.64 0.18 290);
+  --sidebar-ring: oklch(0.58 0.18 25);
 
-  --gradient-primary: linear-gradient(135deg, oklch(0.7 0.18 290), oklch(0.58 0.16 295) 52%, oklch(0.49 0.12 285));
+  --gradient-primary: linear-gradient(135deg, oklch(0.66 0.18 25), oklch(0.54 0.15 25) 52%, oklch(0.38 0.08 25));
   --gradient-hero:
-    radial-gradient(ellipse at top, oklch(0.62 0.14 290 / 0.12), transparent 55%),
-    radial-gradient(ellipse at bottom right, oklch(0.5 0.08 285 / 0.1), transparent 60%);
-  --gradient-glow: radial-gradient(circle at 50% 50%, oklch(0.64 0.18 290 / 0.16), transparent 72%);
+    radial-gradient(ellipse at top, oklch(0.58 0.16 25 / 0.1), transparent 55%),
+    radial-gradient(ellipse at bottom right, oklch(0.48 0.08 25 / 0.08), transparent 60%);
+  --gradient-glow: radial-gradient(circle at 50% 50%, oklch(0.58 0.18 25 / 0.12), transparent 72%);
 }
 
 @layer base {
@@ -145,7 +145,7 @@
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    background: color-mix(in oklab, var(--color-primary) 24%, transparent);
     color: var(--color-foreground);
   }
 }
@@ -260,6 +260,18 @@
   }
 }
 
+@keyframes black-hole-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    filter: saturate(0.95);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: saturate(1.05);
+  }
+}
+
 @utility animate-fade-in {
   animation: fade-in 0.6s ease-out both;
 }
@@ -284,10 +296,50 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    color-mix(in oklab, var(--color-primary) 16%, transparent) 50%,
+    color-mix(in oklab, var(--color-primary) 12%, transparent) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
+}
+
+@layer components {
+  .black-hole-emphasis {
+    position: relative;
+    display: inline-block;
+    padding: 0 0.06em 0.12em;
+    color: var(--color-foreground);
+    background-image: linear-gradient(
+      110deg,
+      var(--color-foreground) 0%,
+      color-mix(in oklab, var(--color-primary) 34%, var(--color-foreground)) 36%,
+      var(--color-foreground) 62%,
+      color-mix(in oklab, var(--color-primary) 22%, var(--color-foreground)) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: black-hole-sweep 7.5s ease-in-out infinite;
+  }
+
+  .black-hole-emphasis-bar {
+    position: absolute;
+    left: 0.05em;
+    right: 0.05em;
+    bottom: 0.04em;
+    height: 0.12em;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-primary) 60%, transparent),
+      transparent
+    );
+    box-shadow: 0 0 24px color-mix(in oklab, var(--color-primary) 18%, transparent);
+    opacity: 0.75;
+    pointer-events: none;
+    animation: black-hole-sweep 7.5s ease-in-out infinite;
+  }
 }
 /* stylelint-enable at-rule-no-unknown, property-no-vendor-prefix */
