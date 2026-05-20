@@ -24,7 +24,7 @@ import { buildPageMeta } from "@/lib/seo";
 export const Route = createFileRoute("/dashboard/cover-letter")({
   head: () => ({
     meta: buildPageMeta({
-      title: "Cover Letter Generator",
+      title: "Generate Job-Ready Cover Letters",
       description:
         "Upload your resume PDF, add a job description, and generate a personalized cover letter grounded in your experience.",
     }),
@@ -339,9 +339,9 @@ function CoverLetterPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Cover Letter Generator</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Generate Job-Ready Cover Letters</h1>
         <p className="mt-1.5 text-muted-foreground">
-          Generate a personalized, job-aligned cover letter from your resume and the JD.
+          Turn your resume and the job description into a focused draft that sounds intentional, not templated.
         </p>
       </div>
 
@@ -352,7 +352,7 @@ function CoverLetterPage() {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-muted-foreground">
-                Free plan: {usage.used}/{usage.limit ?? 5} cover letters used this month.
+                Free plan: {usage.used}/{usage.limit ?? 5} job-ready letters used this month.
               </p>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/pricing">Upgrade</Link>
@@ -396,9 +396,9 @@ function CoverLetterPage() {
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground shadow-soft">
                   <FileUp className="h-6 w-6" />
                 </div>
-                <div className="mt-5 text-base font-semibold">Upload your resume PDF</div>
+                <div className="mt-5 text-base font-semibold">Upload the resume behind the story</div>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                  Choose a PDF and we will keep the extracted text hidden while the cover letter stays grounded in your resume.
+                  Choose a PDF and ApplySmart will ground the letter in your real experience.
                 </p>
                 <span className="mt-5 inline-flex items-center rounded-full border border-border/60 bg-background px-3 py-1 text-xs text-muted-foreground">
                   PDF only
@@ -448,7 +448,7 @@ function CoverLetterPage() {
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-            <Label className="text-sm font-semibold">Job description</Label>
+            <Label className="text-sm font-semibold">Target job description</Label>
             <p className="mt-1 text-xs text-muted-foreground">
               Include responsibilities, required skills, and company context for a stronger result.
             </p>
@@ -481,7 +481,7 @@ function CoverLetterPage() {
             ) : (
               <>
                 <Wand2 />
-                {usage?.blocked ? "Limit reached" : "Generate cover letter"}
+                {usage?.blocked ? "Limit reached" : "Generate Job-Ready Letter"}
               </>
             )}
           </Button>
@@ -495,9 +495,9 @@ function CoverLetterPage() {
                 AI Draft
               </div>
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight">Your generated cover letter</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Your role-specific draft</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  The draft stays grounded in the resume details you provided.
+                  The draft stays grounded in your resume and frames your experience for this exact role.
                 </p>
               </div>
             </div>
@@ -527,7 +527,7 @@ function CoverLetterPage() {
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <FileText className="h-6 w-6" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">Your draft will appear here</h3>
+                <h3 className="mt-4 text-lg font-semibold">Your job-ready draft will appear here</h3>
                 <p className="mt-2 max-w-md text-sm text-muted-foreground">
                   Add your resume and the job description, then generate a tailored cover letter you can copy or export.
                 </p>

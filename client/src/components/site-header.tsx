@@ -9,15 +9,16 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { label: "Features", to: "/#features" },
   { label: "How it works", to: "/#how-it-works" },
+  { label: "Preview", to: "/#preview" },
+  { label: "Why rejected", to: "/#why" },
   { label: "Pricing", to: "/pricing" },
-  { label: "Dashboard", to: "/dashboard" },
 ];
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/75 backdrop-blur-xl">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
 
@@ -26,7 +27,7 @@ export function SiteHeader() {
             <a
               key={link.to}
               href={link.to}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
             >
               {link.label}
             </a>
@@ -39,7 +40,7 @@ export function SiteHeader() {
             <Link to="/login">Log in</Link>
           </Button>
           <Button variant="hero" size="sm" asChild>
-            <Link to="/signup">Get started</Link>
+            <Link to="/signup">Get ATS Feedback</Link>
           </Button>
         </div>
 
@@ -53,7 +54,7 @@ export function SiteHeader() {
 
       <div
         className={cn(
-          "overflow-hidden border-t border-border/40 bg-background/95 backdrop-blur-xl transition-all md:hidden",
+          "overflow-hidden border-t border-white/10 bg-background/95 backdrop-blur-xl transition-all md:hidden",
           open ? "max-h-96" : "max-h-0",
         )}
       >
@@ -63,7 +64,7 @@ export function SiteHeader() {
               key={link.to}
               href={link.to}
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
             >
               {link.label}
             </a>
@@ -73,7 +74,7 @@ export function SiteHeader() {
               <Link to="/login">Log in</Link>
             </Button>
             <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Get started</Link>
+              <Link to="/signup">Get Feedback</Link>
             </Button>
           </div>
         </nav>

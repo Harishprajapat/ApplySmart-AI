@@ -61,13 +61,13 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/resume", label: "Resume Analyzer", icon: FileSearch, exact: false },
-  { to: "/dashboard/cover-letter", label: "Cover Letter", icon: PenLine, exact: false },
+  { to: "/dashboard", label: "Command Center", icon: LayoutDashboard, exact: true },
+  { to: "/dashboard/resume", label: "ATS Resume Analysis", icon: FileSearch, exact: false },
+  { to: "/dashboard/cover-letter", label: "Job-Ready Letters", icon: PenLine, exact: false },
   { to: "/dashboard/interview", label: "Interview Prep", icon: MessageSquareQuote, exact: false },
   { to: "/dashboard/jobs", label: "Job Tracker", icon: KanbanSquare, exact: false },
   { to: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
-  { to: "/dashboard/history", label: "History", icon: Clock, exact: false },
+  { to: "/dashboard/history", label: "AI Workspace", icon: Clock, exact: false },
 ] as const;
 
 function DashboardLayout() {
@@ -113,15 +113,15 @@ function DashboardLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-muted/40">
+    <div className="flex min-h-screen bg-background bg-[radial-gradient(circle_at_top_right,oklch(0.76_0.17_55/.12),transparent_28%),radial-gradient(circle_at_20%_90%,oklch(0.73_0.13_190/.1),transparent_30%)]">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col transform border-r border-sidebar-border bg-sidebar transition-transform duration-200 lg:static lg:w-64 lg:max-w-none lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col transform border-r border-sidebar-border bg-sidebar/90 backdrop-blur-xl transition-transform duration-200 lg:static lg:w-64 lg:max-w-none lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-5">
-          <Logo />
+                <Logo />
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -139,8 +139,8 @@ function DashboardLayout() {
                 className={cn(
                   "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                   isActive
-                    ? "bg-gradient-primary text-primary-foreground shadow-soft"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                    : "text-sidebar-foreground/78 hover:bg-white/[0.06] hover:text-sidebar-accent-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -150,15 +150,15 @@ function DashboardLayout() {
           })}
         </nav>
 
-        <div className="mx-3 mb-3 mt-auto rounded-2xl border border-sidebar-border bg-gradient-to-br from-primary/10 to-primary-glow/10 p-4">
+        <div className="mx-3 mb-3 mt-auto rounded-2xl border border-sidebar-border bg-gradient-to-br from-primary/15 via-white/[0.04] to-accent/20 p-4 shadow-soft">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="h-4 w-4 text-primary" />
-            {usage?.plan === "pro" ? "Pro plan" : "Free plan"}
+            {usage?.plan === "pro" ? "Pro workspace" : "Free workspace"}
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
             {usage?.plan === "pro"
-              ? "Unlimited analyses this month."
-              : `${usage?.used ?? 0} of ${usage?.limit ?? 5} analyses used this month.`}
+              ? "Unlimited resume feedback this month."
+              : `${usage?.used ?? 0} of ${usage?.limit ?? 5} resume scans used this month.`}
           </p>
           {usage?.plan !== "pro" && (
             <Button variant="hero" size="sm" className="mt-3 w-full" asChild>
@@ -171,7 +171,7 @@ function DashboardLayout() {
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-xl sm:flex-nowrap sm:px-6 sm:py-0">
+        <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-white/10 bg-background/78 px-4 py-3 backdrop-blur-xl sm:flex-nowrap sm:px-6 sm:py-0">
           <Button
             variant="ghost"
             size="icon"
@@ -186,7 +186,7 @@ function DashboardLayout() {
 
           <div className="relative order-3 w-full sm:order-none sm:block sm:max-w-md sm:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search applications, drafts, questions..." className="pl-9" />
+            <Input placeholder="Search scans, drafts, questions..." className="border-white/10 bg-white/[0.04] pl-9" />
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">

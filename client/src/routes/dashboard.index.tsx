@@ -38,7 +38,7 @@ export const Route = createFileRoute("/dashboard/")({
 
 const stats = [
   { label: "Applications", value: "24", change: "+8 this week", icon: Briefcase },
-  { label: "Avg. ATS Score", value: "87%", change: "+12% vs last week", icon: Target },
+  { label: "Avg. ATS Signal", value: "87%", change: "+12% vs last week", icon: Target },
   { label: "Interviews booked", value: "5", change: "+2 this week", icon: TrendingUp },
   { label: "Time saved", value: "14h", change: "this month", icon: Clock },
 ];
@@ -46,15 +46,15 @@ const stats = [
 const quickActions = [
   {
     to: "/dashboard/resume",
-    title: "Analyze a resume",
-    desc: "Score against any job description.",
+    title: "Get ATS feedback",
+    desc: "See what the filter sees.",
     icon: FileSearch,
     color: "from-primary to-primary-glow",
   },
   {
     to: "/dashboard/cover-letter",
-    title: "Write a cover letter",
-    desc: "Personalized in 15 seconds.",
+    title: "Generate a job-ready letter",
+    desc: "Tailored without sounding fake.",
     icon: PenLine,
     color: "from-blue-500 to-primary",
   },
@@ -67,8 +67,8 @@ const quickActions = [
   },
   {
     to: "/dashboard/jobs",
-    title: "Track applications",
-    desc: "Stay organized.",
+    title: "Track the hunt",
+    desc: "Keep momentum visible.",
     icon: KanbanSquare,
     color: "from-primary-glow to-pink-500",
   },
@@ -105,15 +105,15 @@ function DashboardHome() {
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user?.name?.split(" ")[0] || "there"}
+            Your AI workspace, {user?.name?.split(" ")[0] || "there"}
           </h1>
           <p className="mt-1.5 text-muted-foreground">
-            You've got 3 active applications. Let's land you an interview today.
+            No more guessing in the dark. Pick a role, sharpen the signal, and apply with receipts.
           </p>
         </div>
         <Button variant="hero" asChild>
           <Link to="/dashboard/resume">
-            New analysis <ArrowRight />
+            Get ATS Feedback <ArrowRight />
           </Link>
         </Button>
       </div>
@@ -122,7 +122,7 @@ function DashboardHome() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-elegant"
+            className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-elegant"
           >
             <div className="flex items-center justify-between">
               <div className="text-xs text-muted-foreground">{s.label}</div>
@@ -135,13 +135,13 @@ function DashboardHome() {
       </div>
 
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Quick actions</h2>
+        <h2 className="mb-4 text-lg font-semibold">Start where the rejection usually starts</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((q) => (
             <Link
               key={q.to}
               to={q.to}
-              className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-elegant"
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-card/80 p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-elegant"
             >
               <div
                 className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${q.color} shadow-soft`}
@@ -161,9 +161,9 @@ function DashboardHome() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft lg:col-span-2">
+        <div className="rounded-2xl border border-white/10 bg-card/80 p-6 shadow-soft lg:col-span-2">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Recent activity</h2>
+            <h2 className="text-lg font-semibold">Your AI Workspace</h2>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/dashboard/history">View all</Link>
             </Button>
@@ -180,7 +180,7 @@ function DashboardHome() {
             </div>
           ) : recentActivity.length === 0 ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-              No AI history yet. Generate a resume analysis or cover letter to see activity here.
+              Your workspace is quiet. Run an ATS scan or generate a cover letter and we will keep it here.
             </div>
           ) : (
             <ul className="divide-y divide-border/60">
@@ -214,16 +214,16 @@ function DashboardHome() {
           )}
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-primary-glow/10 p-6 shadow-soft">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-primary/15 via-card to-accent/20 p-6 shadow-soft">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs font-medium shadow-soft">
               <Sparkles className="h-3 w-3 text-primary" /> AI Tip of the day
             </div>
-            <h3 className="mt-4 text-lg font-semibold">Quantify your impact</h3>
+            <h3 className="mt-4 text-lg font-semibold">Make the good stuff louder</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Resumes with numbers (e.g. "increased revenue by 32%") get 40% more callbacks. Try it on
-              your top 3 bullets.
+              Recruiters skim for proof. Add numbers, ownership, and tools to your strongest bullets so
+              your work does not undersell itself.
             </p>
             <Button variant="outline" size="sm" className="mt-4" asChild>
               <Link to="/dashboard/resume">Improve my resume</Link>
