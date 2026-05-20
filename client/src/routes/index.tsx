@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import ProductPreview from "@/components/ProductPreview";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -254,103 +255,6 @@ function HowItWorks() {
     </section>
   );
 }
-
-function ProductPreview() {
-  return (
-    <section id="preview" className="py-24 sm:py-32">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <Badge variant="outline" className="border-primary/20 bg-white/[0.03] text-primary">
-              Before / after
-            </Badge>
-            <h2 className="mt-5 text-balance text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-              Same profile. Sharper signal.
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted-foreground">
-              Clear proof beats vague confidence. This is what changes the read.
-            </p>
-          </div>
-
-          <div className="relative">
-            <div className="absolute -inset-6 rounded-[2rem] bg-primary/5 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-elegant">
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-5 py-4">
-                <div className="flex gap-2">
-                  <span className="h-3 w-3 rounded-full bg-white/20" />
-                  <span className="h-3 w-3 rounded-full bg-white/14" />
-                  <span className="h-3 w-3 rounded-full bg-primary/60" />
-                </div>
-                <span className="rounded-full bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-                  applysmart.ai/transform
-                </span>
-              </div>
-
-              <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto_1fr]">
-                <div className="rounded-3xl border border-white/10 bg-background/60 p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
-                    Before
-                  </div>
-                  <div className="mt-4 flex items-end gap-2">
-                    <span className="text-6xl font-black tracking-[-0.08em] text-foreground">42</span>
-                    <span className="pb-2 text-muted-foreground">/100</span>
-                  </div>
-                  <div className="mt-5 h-2 rounded-full bg-muted">
-                    <div className="h-full w-[42%] rounded-full bg-primary/55" />
-                  </div>
-                  <div className="mt-5 space-y-3 text-sm text-muted-foreground">
-                    <ComparisonLine label="Headline" value="Generic profile summary" />
-                    <ComparisonLine label="Bullets" value="Tasks without proof" />
-                    <ComparisonLine label="Signal" value="Missing keywords and impact" />
-                  </div>
-                </div>
-
-                <div className="hidden items-center justify-center lg:flex">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-                    <ArrowRight className="h-5 w-5" />
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-white/10 bg-background/60 p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
-                    After
-                  </div>
-                  <div className="mt-4 flex items-end gap-2">
-                    <span className="text-6xl font-black tracking-[-0.08em] text-foreground">86</span>
-                    <span className="pb-2 text-muted-foreground">/100</span>
-                  </div>
-                  <div className="mt-5 h-2 rounded-full bg-muted">
-                    <div className="h-full w-[86%] rounded-full bg-primary" />
-                  </div>
-                  <div className="mt-5 space-y-3 text-sm text-muted-foreground">
-                    <ComparisonLine label="Headline" value="Role-specific and clear" />
-                    <ComparisonLine label="Bullets" value="Impact with numbers" />
-                    <ComparisonLine label="Signal" value="Keywords and outcomes aligned" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-                {[
-                  "No filler language.",
-                  "Proof is surfaced first.",
-                  "The role reads obvious.",
-                ].map((item) => (
-                  <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-
 
 function ComparisonLine({ label, value }: { label: string; value: string }) {
   return (

@@ -476,9 +476,6 @@ function ResumeAnalyzer() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">ATS Resume Analysis</h1>
-        <p className="mt-1.5 text-muted-foreground">
-          Upload your resume PDF, paste the job description, and find the signals recruiters might miss.
-        </p>
       </div>
 
       {usage && (
@@ -529,10 +526,6 @@ function ResumeAnalyzer() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
           <Label className="text-sm font-semibold">Your resume</Label>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Upload a PDF and we will extract the content in the background for analysis.
-          </p>
-
           <input
             ref={fileInputRef}
             type="file"
