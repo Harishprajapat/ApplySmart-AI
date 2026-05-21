@@ -13,16 +13,14 @@ import {
   Target,
   Clock,
   Sparkles,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import {
-  type AIHistoryItem,
-  fetchAIHistory,
-  getAIHistoryTypeLabel,
-} from "@/lib/ai-history";
+import { type AIHistoryItem, fetchAIHistory, getAIHistoryTypeLabel } from "@/lib/ai-history";
+import { fetchDashboardMetrics, type DashboardMetrics } from "@/lib/dashboard-metrics";
 import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -36,12 +34,20 @@ export const Route = createFileRoute("/dashboard/")({
   component: DashboardHome,
 });
 
-const stats = [
-  { label: "Applications", value: "24", change: "+8 this week", icon: Briefcase },
-  { label: "Avg. ATS Signal", value: "87%", change: "+12% vs last week", icon: Target },
-  { label: "Interviews booked", value: "5", change: "+2 this week", icon: TrendingUp },
-  { label: "Time saved", value: "14h", change: "this month", icon: Clock },
-];
+const statConfig = [
+  { key: "applications", label: "Applications", icon: Briefcase },
+  { key: "avgAtsSignal", label: "Avg. ATS Signal", icon: Target },
+  { key: "interviewsBooked", label: "Interviews booked", icon: TrendingUp },
+  { key: "timeSaved", label: "Time saved", icon: Clock },
+] as const;
+
+type MetricCard = {
+  key: (typeof statConfig)[number]["key"];
+  label: string;
+  icon: (typeof statConfig)[number]["icon"];
+  value: string;
+  change: string;
+};
 
 const quickActions = [
   {
@@ -78,6 +84,9 @@ function DashboardHome() {
   const { user } = useCurrentUser();
   const [recentActivity, setRecentActivity] = useState<AIHistoryItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -100,6 +109,86 @@ function DashboardHome() {
     fetchRecentActivity();
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setMetricsLoading(false);
+      return;
+    }
+
+    const fetchMetrics = async () => {
+      try {
+        setMetricsError(null);
+        const data = await fetchDashboardMetrics(token);
+        setMetrics(data);
+      } catch (error) {
+        setMetrics(null);
+        setMetricsError(error instanceof Error ? error.message : "Failed to fetch metrics");
+      } finally {
+        setMetricsLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
+
+  const retryMetrics = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setMetricsLoading(true);
+    setMetricsError(null);
+
+    try {
+      const data = await fetchDashboardMetrics(token);
+      setMetrics(data);
+    } catch (error) {
+      setMetrics(null);
+      setMetricsError(error instanceof Error ? error.message : "Failed to fetch metrics");
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
+
+  const formatTrend = (delta: number | null, options?: { suffix?: string }) => {
+    const suffix = options?.suffix || "";
+    if (delta === null || delta === 0) return "Same as last week";
+    return `${delta > 0 ? "+" : ""}${delta}${suffix}`;
+  };
+
+  const metricCards: MetricCard[] = [
+    {
+      ...statConfig[0],
+      value: metrics ? `${metrics.applications.total}` : "—",
+      change: metrics
+        ? `${metrics.applications.weekly > 0 ? "+" : ""}${metrics.applications.weekly} this week`
+        : "Loading",
+    },
+    {
+      ...statConfig[1],
+      value: metrics ? `${metrics.avgAtsSignal.average ?? "—"}%` : "—",
+      change: metrics
+        ? formatTrend(metrics.avgAtsSignal.delta, { suffix: " pts vs last week" })
+        : "Loading",
+    },
+    {
+      ...statConfig[2],
+      value: metrics ? `${metrics.interviewsBooked.total}` : "—",
+      change: metrics
+        ? `${metrics.interviewsBooked.weekly > 0 ? "+" : ""}${metrics.interviewsBooked.weekly} this week`
+        : "Loading",
+    },
+    {
+      ...statConfig[3],
+      value: metrics ? `${metrics.timeSaved.hoursSaved}h` : "—",
+      change: metrics ? "saved this month" : "Loading",
+    },
+  ];
+
+  const displayCards: MetricCard[] = metricsLoading
+    ? statConfig.map((s) => ({ ...s, value: "—", change: "Loading" }))
+    : metricCards;
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
@@ -118,18 +207,42 @@ function DashboardHome() {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-3">
+        {metricsError ? (
+          <Button variant="outline" size="sm" onClick={() => void retryMetrics()} className="ml-auto">
+            <RefreshCcw className="h-4 w-4" />
+            Retry metrics
+          </Button>
+        ) : (
+          <div />
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">
-        {stats.map((s) => (
+        {displayCards.map((s) => (
           <div
-            key={s.label}
+            key={s.key}
             className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-elegant"
           >
             <div className="flex items-center justify-between">
               <div className="text-xs text-muted-foreground">{s.label}</div>
               <s.icon className="h-4 w-4 text-primary" />
             </div>
-            <div className="mt-2 text-3xl font-bold tracking-tight">{s.value}</div>
-            <div className="mt-1 text-xs text-success">{s.change}</div>
+            {metricsLoading ? (
+              <div className="mt-3 space-y-3">
+                <Skeleton className="h-8 w-24 bg-white/5" />
+                <Skeleton className="h-3 w-28 bg-white/5" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 text-3xl font-bold tracking-tight">
+                  {metricsError ? "—" : s.value}
+                </div>
+                <div className="mt-1 text-xs text-success">
+                  {metricsError ? "Unable to load metrics" : s.change}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>

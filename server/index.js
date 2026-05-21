@@ -4,6 +4,7 @@ import "dotenv/config";
 import { connectDB } from "./config/db.js";
 import analyzeRoute from "./routes/analyze.js";
 import authRoute from "./routes/auth.js";
+import dashboardRoute from "./routes/dashboard.js";
 import coverLetterRoute from "./routes/coverLetter.js";
 import historyRoute from "./routes/history.js";
 connectDB();
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use("/api/analyze", analyzeRoute);
 app.use("/api/auth", authRoute);
+app.use("/api/dashboard", dashboardRoute);
 app.use("/api/cover-letter", coverLetterRoute);
 app.use("/api/history", historyRoute);
 
