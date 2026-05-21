@@ -678,21 +678,21 @@ function ResultsSkeleton() {
 function getScoreInsight(score: number) {
   if (score >= 85) {
     return {
-      title: "Strong technical alignment",
-      desc: "Your resume is close to the role. Tighten the missing keywords and make the strongest impact bullets easier to spot.",
+      title: "Strong signal. Fix 2 things and it gets dangerous.",
+      desc: "The filter already sees you as a fit. Now make the proof louder and kill the weak phrasing.",
     };
   }
 
   if (score >= 65) {
     return {
-      title: "Good candidate, muted signal",
-      desc: "You likely have relevant experience, but recruiters may miss it unless the role language and proof points are sharper.",
+      title: "Good foundation. The signal is just too soft.",
+      desc: "You likely belong here, but the resume does not make the value obvious fast enough.",
     };
   }
 
   return {
-    title: "Recruiters may miss the fit",
-    desc: "The resume currently undersells your match. Focus on missing skills, clearer structure, and role-specific wording before applying.",
+    title: "ATS is filtering this before humans see it.",
+    desc: "The resume undersells the match. Tighten the keywords, proof, and structure before you send it again.",
   };
 }
 
@@ -864,7 +864,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
         <div className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary">
-              Resume verdict
+              ATS readout
             </Badge>
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">{scoreInsight.title}</h2>
@@ -881,7 +881,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
               <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                Verdict
+                Score verdict
               </div>
               <div className="mt-2 text-sm font-semibold text-foreground">{verdict}</div>
             </div>
@@ -939,11 +939,11 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             </TabsTrigger>
             <TabsTrigger value="suggestions" className="h-11 rounded-xl">
               <ListChecks />
-              Suggestions
+              Critical fixes
             </TabsTrigger>
             <TabsTrigger value="analysis" className="h-11 rounded-xl">
               <Search />
-              Analysis
+              ATS readout
             </TabsTrigger>
           </TabsList>
 
@@ -1036,7 +1036,7 @@ function ResultsView({ result }: { result: AnalysisResult }) {
             <Accordion type="single" collapsible className="rounded-2xl border border-border/60 bg-card px-5 shadow-soft">
               <AccordionItem value="ats-analysis" className="border-b-0">
                 <AccordionTrigger className="py-5 text-base font-semibold hover:no-underline">
-                  Recruiter + ATS Readout
+                  What the ATS sees
                 </AccordionTrigger>
                 <AccordionContent className="pb-5">
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

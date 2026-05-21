@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { label: "Features", to: "/#features" },
   { label: "How it works", to: "/#how-it-works" },
-  { label: "Preview", to: "/#preview" },
+  { label: "Before / After", to: "/#preview" },
   { label: "Why rejected", to: "/#why" },
   { label: "Pricing", to: "/pricing" },
 ];
